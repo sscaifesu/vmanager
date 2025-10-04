@@ -219,6 +219,46 @@ token_secret=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 3. Add → 填写信息
 4. 保存 Token Secret（只显示一次）
 
+### 配置 Token 权限（重要）
+
+**注意**: API Token 默认不继承用户权限，必须显式分配权限。
+
+#### 方法 1: 命令行（推荐）
+
+```bash
+# 为 Token 添加审计权限（只读，推荐）
+pveum acl modify / -token 'root@pam!vmanager' -role PVEAuditor
+
+# 或者添加 VM 管理权限（读写）
+pveum acl modify / -token 'root@pam!vmanager' -role PVEVMAdmin
+```
+
+#### 方法 2: Web 界面
+
+1. Datacenter → Permissions → Add → API Token Permission
+2. 填写信息：
+   - **Path**: `/`
+   - **API Token**: 选择你的 Token
+   - **Role**: `PVEAuditor`（只读）或 `PVEVMAdmin`（读写）
+   - **Propagate**: 勾选
+
+#### 权限角色说明
+
+| 角色 | 权限 | 适用场景 |
+|------|------|----------|
+| PVEAuditor | 只读，可查看所有资源 | vmanager list, status（推荐）|
+| PVEVMAdmin | 读写，可管理 VM | vmanager start, stop, restart |
+
+#### 验证权限
+
+```bash
+# 测试 API 是否返回数据
+curl -s -k 'https://YOUR_HOST:8006/api2/json/nodes/YOUR_NODE/qemu' \
+  -H 'Authorization: PVEAPIToken=USER!TOKEN=SECRET'
+
+# 应该返回 VM 列表，而不是 {"data":[]}
+```
+
 ## 工作原理
 
 ### 环境检测流程
