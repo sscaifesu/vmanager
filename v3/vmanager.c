@@ -773,15 +773,25 @@ int check_vm_exists(int vmid) {
 int execute_api_command(Config *config, const char *cmd, int vmid) {
     char command[MAX_COMMAND];
     
-    if (strlen(config->token_id) > 0) {
+    if (strlen(config->token_id) == 0) {
+        fprintf(stderr, COLOR_YELLOW "警告：密码认证暂未实现，请使用 API Token\n" COLOR_RESET);
+        return -1;
+    }
+    
+    // status 命令使用 GET 方法获取状态
+    if (strcmp(cmd, "status") == 0) {
+        snprintf(command, sizeof(command),
+                "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu/%d/status/current' "
+                "-H 'Authorization: PVEAPIToken=%s=%s' | python3 -m json.tool 2>/dev/null || cat",
+                config->host, config->port, config->node, vmid,
+                config->token_id, config->token_secret);
+    } else {
+        // 其他命令使用 POST 方法
         snprintf(command, sizeof(command),
                 "curl -s -k -X POST 'https://%s:%d/api2/json/nodes/%s/qemu/%d/status/%s' "
                 "-H 'Authorization: PVEAPIToken=%s=%s'",
                 config->host, config->port, config->node, vmid, cmd,
                 config->token_id, config->token_secret);
-    } else {
-        fprintf(stderr, COLOR_YELLOW "警告：密码认证暂未实现，请使用 API Token\n" COLOR_RESET);
-        return -1;
     }
     
     return system(command);
