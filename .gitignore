@@ -1,0 +1,23 @@
+# 编译产物
+vm_manager
+vmanager
+*.o
+*.out
+*.exe
+
+# 调试文件
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# 编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
