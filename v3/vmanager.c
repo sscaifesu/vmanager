@@ -791,6 +791,7 @@ int list_vms_remote(Config *config) {
     char command[MAX_COMMAND];
     FILE *fp;
     char line[4096];
+    int debug_mode = (getenv("VMANAGER_DEBUG") != NULL);
     
     if (strlen(config->token_id) == 0) {
         fprintf(stderr, COLOR_YELLOW "警告：密码认证暂未实现，请使用 API Token\n" COLOR_RESET);
@@ -803,6 +804,12 @@ int list_vms_remote(Config *config) {
             "-H 'Authorization: PVEAPIToken=%s=%s'",
             config->host, config->port, config->node,
             config->token_id, config->token_secret);
+    
+    if (debug_mode) {
+        fprintf(stderr, COLOR_CYAN "调试: API 请求\n" COLOR_RESET);
+        fprintf(stderr, "  URL: https://%s:%d/api2/json/nodes/%s/qemu\n",
+                config->host, config->port, config->node);
+    }
     
     fp = popen(command, "r");
     if (fp == NULL) {
@@ -822,15 +829,27 @@ int list_vms_remote(Config *config) {
     }
     pclose(fp);
     
+    if (debug_mode) {
+        fprintf(stderr, COLOR_CYAN "调试: API 响应\n" COLOR_RESET);
+        fprintf(stderr, "%s\n", response);
+        fprintf(stderr, COLOR_CYAN "调试: 响应长度 = %zu 字节\n" COLOR_RESET, total);
+    }
+    
     // 检查是否有数据
     if (strstr(response, "\"data\"") == NULL) {
         fprintf(stderr, COLOR_RED "错误：API 响应格式错误\n" COLOR_RESET);
+        if (!debug_mode) {
+            fprintf(stderr, "提示: 使用 VMANAGER_DEBUG=1 查看详细信息\n");
+        }
         return -1;
     }
     
     // 检查是否为空列表
     if (strstr(response, "\"data\":[]") != NULL || strstr(response, "\"data\": []") != NULL) {
         printf(COLOR_YELLOW "没有找到虚拟机\n" COLOR_RESET);
+        if (debug_mode) {
+            fprintf(stderr, COLOR_CYAN "调试: 节点 '%s' 上没有 VM\n" COLOR_RESET, config->node);
+        }
         return 0;
     }
     
