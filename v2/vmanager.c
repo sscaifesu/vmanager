@@ -335,21 +335,27 @@ int main(int argc, char *argv[]) {
                     // 基本状态
                     printf(COLOR_CYAN "基本信息:\n" COLOR_RESET);
                     snprintf(cmd_buf, sizeof(cmd_buf), "qm status %d | grep -v '^$'", vmid);
-                    system(cmd_buf);
+                    if (system(cmd_buf) != 0) {
+                        printf("  状态: 无法获取\n");
+                    }
                     
                     // 配置信息
                     printf("\n" COLOR_CYAN "配置信息:\n" COLOR_RESET);
                     snprintf(cmd_buf, sizeof(cmd_buf), 
                             "qm config %d | grep -E '^(name|memory|cores|sockets|bootdisk|net0|scsi0|ide0|sata0)' | "
                             "sed 's/^/  /'", vmid);
-                    system(cmd_buf);
+                    if (system(cmd_buf) != 0) {
+                        printf("  配置: 无法获取\n");
+                    }
                     
                     // 存储信息
                     printf("\n" COLOR_CYAN "存储信息:\n" COLOR_RESET);
                     snprintf(cmd_buf, sizeof(cmd_buf),
                             "qm config %d | grep -E '^(scsi|ide|sata|virtio)[0-9]:' | "
                             "sed 's/^/  /' | head -5", vmid);
-                    system(cmd_buf);
+                    if (system(cmd_buf) != 0) {
+                        printf("  存储: 无法获取\n");
+                    }
                     
                     // IP 地址（仅运行中的 VM）
                     snprintf(cmd_buf, sizeof(cmd_buf), "qm status %d | grep -q 'status: running'", vmid);
@@ -391,7 +397,9 @@ int main(int argc, char *argv[]) {
                         snprintf(cmd_buf, sizeof(cmd_buf),
                                 "qm config %d | grep -oP 'net0:.*,macaddr=\\K[0-9A-Fa-f:]+' | "
                                 "sed 's/^/  MAC: /' || echo '  MAC: N/A'", vmid);
-                        system(cmd_buf);
+                        if (system(cmd_buf) != 0) {
+                            printf("  MAC: N/A\n");
+                        }
                     }
                     
                     // 快照信息
@@ -404,7 +412,9 @@ int main(int argc, char *argv[]) {
                             printf("  快照数量: %d\n", snap_count);
                             snprintf(cmd_buf, sizeof(cmd_buf), 
                                     "qm listsnapshot %d 2>/dev/null | tail -n +2 | sed 's/^/  /' | head -5", vmid);
-                            system(cmd_buf);
+                            if (system(cmd_buf) != 0) {
+                                printf("  快照列表: 无法获取\n");
+                            }
                         }
                         pclose(snap_fp);
                     }
