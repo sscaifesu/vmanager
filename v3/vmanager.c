@@ -864,54 +864,77 @@ int list_vms_remote(Config *config) {
         int vmid = 0;
         char name[64] = "N/A";
         char status[32] = "N/A";
-        int maxmem = 0;
+        long long maxmem = 0;
+        
+        // 找到当前对象的结束位置（下一个 } 或数组结束）
+        char *obj_end = strchr(ptr, '}');
+        if (obj_end == NULL) {
+            break;
+        }
         
         // 提取 vmid
         if (sscanf(ptr, "\"vmid\":%d", &vmid) == 1) {
-            // 提取 name
-            char *name_ptr = strstr(ptr, "\"name\"");
-            if (name_ptr != NULL) {
-                char *quote1 = strchr(name_ptr + 6, '"');
-                if (quote1 != NULL) {
-                    char *quote2 = strchr(quote1 + 1, '"');
-                    if (quote2 != NULL) {
-                        size_t len = quote2 - quote1 - 1;
-                        if (len < sizeof(name)) {
-                            strncpy(name, quote1 + 1, len);
-                            name[len] = '\0';
+            // 在当前对象范围内提取 name
+            char *name_ptr = ptr;
+            while (name_ptr < obj_end && (name_ptr = strstr(name_ptr, "\"name\"")) != NULL) {
+                if (name_ptr > obj_end) break;
+                char *colon = strchr(name_ptr, ':');
+                if (colon && colon < obj_end) {
+                    char *quote1 = strchr(colon, '"');
+                    if (quote1 && quote1 < obj_end) {
+                        char *quote2 = strchr(quote1 + 1, '"');
+                        if (quote2 && quote2 < obj_end) {
+                            size_t len = quote2 - quote1 - 1;
+                            if (len < sizeof(name) && len > 0) {
+                                strncpy(name, quote1 + 1, len);
+                                name[len] = '\0';
+                                break;
+                            }
                         }
                     }
                 }
+                name_ptr++;
             }
             
-            // 提取 status
-            char *status_ptr = strstr(ptr, "\"status\"");
-            if (status_ptr != NULL) {
-                char *quote1 = strchr(status_ptr + 8, '"');
-                if (quote1 != NULL) {
-                    char *quote2 = strchr(quote1 + 1, '"');
-                    if (quote2 != NULL) {
-                        size_t len = quote2 - quote1 - 1;
-                        if (len < sizeof(status)) {
-                            strncpy(status, quote1 + 1, len);
-                            status[len] = '\0';
+            // 在当前对象范围内提取 status
+            char *status_ptr = ptr;
+            while (status_ptr < obj_end && (status_ptr = strstr(status_ptr, "\"status\"")) != NULL) {
+                if (status_ptr > obj_end) break;
+                char *colon = strchr(status_ptr, ':');
+                if (colon && colon < obj_end) {
+                    char *quote1 = strchr(colon, '"');
+                    if (quote1 && quote1 < obj_end) {
+                        char *quote2 = strchr(quote1 + 1, '"');
+                        if (quote2 && quote2 < obj_end) {
+                            size_t len = quote2 - quote1 - 1;
+                            if (len < sizeof(status) && len > 0) {
+                                strncpy(status, quote1 + 1, len);
+                                status[len] = '\0';
+                                break;
+                            }
                         }
                     }
                 }
+                status_ptr++;
             }
             
-            // 提取 maxmem
-            char *mem_ptr = strstr(ptr, "\"maxmem\"");
-            if (mem_ptr != NULL) {
-                sscanf(mem_ptr, "\"maxmem\":%d", &maxmem);
+            // 在当前对象范围内提取 maxmem
+            char *mem_ptr = ptr;
+            while (mem_ptr < obj_end && (mem_ptr = strstr(mem_ptr, "\"maxmem\"")) != NULL) {
+                if (mem_ptr > obj_end) break;
+                if (sscanf(mem_ptr, "\"maxmem\":%lld", &maxmem) == 1) {
+                    break;
+                }
+                mem_ptr++;
             }
             
             // 打印 VM 信息
             printf("%-10d %-20s %-12s %-10d %-15s %-12s %-20s\n",
-                   vmid, name, status, maxmem / 1024 / 1024, "N/A", "N/A", "N/A");
+                   vmid, name, status, (int)(maxmem / 1024 / 1024), "N/A", "N/A", "N/A");
         }
         
-        ptr++;
+        // 移动到下一个对象
+        ptr = obj_end + 1;
     }
     
     return 0;
