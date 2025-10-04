@@ -789,20 +789,113 @@ int execute_api_command(Config *config, const char *cmd, int vmid) {
 
 int list_vms_remote(Config *config) {
     char command[MAX_COMMAND];
+    FILE *fp;
+    char line[4096];
     
-    if (strlen(config->token_id) > 0) {
-        snprintf(command, sizeof(command),
-                "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu' "
-                "-H 'Authorization: PVEAPIToken=%s=%s' | "
-                "python3 -m json.tool 2>/dev/null || cat",
-                config->host, config->port, config->node,
-                config->token_id, config->token_secret);
-    } else {
+    if (strlen(config->token_id) == 0) {
         fprintf(stderr, COLOR_YELLOW "警告：密码认证暂未实现，请使用 API Token\n" COLOR_RESET);
         return -1;
     }
     
-    return system(command);
+    // 获取 VM 列表
+    snprintf(command, sizeof(command),
+            "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu' "
+            "-H 'Authorization: PVEAPIToken=%s=%s'",
+            config->host, config->port, config->node,
+            config->token_id, config->token_secret);
+    
+    fp = popen(command, "r");
+    if (fp == NULL) {
+        fprintf(stderr, COLOR_RED "错误：无法执行 API 请求\n" COLOR_RESET);
+        return -1;
+    }
+    
+    // 读取完整响应
+    char response[65536] = {0};
+    size_t total = 0;
+    while (fgets(line, sizeof(line), fp) != NULL && total < sizeof(response) - 1) {
+        size_t len = strlen(line);
+        if (total + len < sizeof(response)) {
+            strcat(response, line);
+            total += len;
+        }
+    }
+    pclose(fp);
+    
+    // 检查是否有数据
+    if (strstr(response, "\"data\"") == NULL) {
+        fprintf(stderr, COLOR_RED "错误：API 响应格式错误\n" COLOR_RESET);
+        return -1;
+    }
+    
+    // 检查是否为空列表
+    if (strstr(response, "\"data\":[]") != NULL || strstr(response, "\"data\": []") != NULL) {
+        printf(COLOR_YELLOW "没有找到虚拟机\n" COLOR_RESET);
+        return 0;
+    }
+    
+    // 打印表头
+    printf(COLOR_BOLD "%-10s %-20s %-12s %-10s %-15s %-12s %-20s\n" COLOR_RESET,
+           "VMID", "NAME", "STATUS", "MEM(MB)", "BOOTDISK(GB)", "BRIDGE", "IP ADDRESS");
+    printf("─────────────────────────────────────────────────────────────────────────────────────────────────\n");
+    
+    // 简单的 JSON 解析（提取关键字段）
+    char *ptr = response;
+    while ((ptr = strstr(ptr, "\"vmid\"")) != NULL) {
+        int vmid = 0;
+        char name[64] = "N/A";
+        char status[32] = "N/A";
+        int maxmem = 0;
+        
+        // 提取 vmid
+        if (sscanf(ptr, "\"vmid\":%d", &vmid) == 1) {
+            // 提取 name
+            char *name_ptr = strstr(ptr, "\"name\"");
+            if (name_ptr != NULL) {
+                char *quote1 = strchr(name_ptr + 6, '"');
+                if (quote1 != NULL) {
+                    char *quote2 = strchr(quote1 + 1, '"');
+                    if (quote2 != NULL) {
+                        size_t len = quote2 - quote1 - 1;
+                        if (len < sizeof(name)) {
+                            strncpy(name, quote1 + 1, len);
+                            name[len] = '\0';
+                        }
+                    }
+                }
+            }
+            
+            // 提取 status
+            char *status_ptr = strstr(ptr, "\"status\"");
+            if (status_ptr != NULL) {
+                char *quote1 = strchr(status_ptr + 8, '"');
+                if (quote1 != NULL) {
+                    char *quote2 = strchr(quote1 + 1, '"');
+                    if (quote2 != NULL) {
+                        size_t len = quote2 - quote1 - 1;
+                        if (len < sizeof(status)) {
+                            strncpy(status, quote1 + 1, len);
+                            status[len] = '\0';
+                        }
+                    }
+                }
+            }
+            
+            // 提取 maxmem
+            char *mem_ptr = strstr(ptr, "\"maxmem\"");
+            if (mem_ptr != NULL) {
+                sscanf(mem_ptr, "\"maxmem\":%d", &maxmem);
+            }
+            
+            // 打印 VM 信息
+            printf("%-10d %-20s %-12s %-10d %-15s %-12s %-20s\n",
+                   vmid, name, status, maxmem / 1024 / 1024, "N/A", "N/A", "N/A");
+        }
+        
+        ptr++;
+    }
+    
+    return 0;
 }
 
 // 通用函数
