@@ -21,3 +21,16 @@ vmanager
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 内部文档（不推送到 GitHub）
+# 命名规则: INTERNAL-*.md
+INTERNAL-*.md
+INTERNAL-*.txt
+*-INTERNAL.md
+*-INTERNAL.txt
+
+# 临时文件和笔记
+TODO.md
+NOTES.md
+DRAFT-*.md
+WIP-*.md
