@@ -356,36 +356,15 @@ int main(int argc, char *argv[]) {
                     if (system(cmd_buf) == 0) {
                         printf("\n" COLOR_CYAN "网络信息:\n" COLOR_RESET);
                         
-                        // 获取 IPv4 地址
+                        // 尝试获取 IP 地址
                         snprintf(cmd_buf, sizeof(cmd_buf),
                                 "qm guest cmd %d network-get-interfaces 2>/dev/null | "
                                 "grep -A 2 '\"ip-address\"' | "
                                 "grep -oP '\"ip-address\"\\s*:\\s*\"\\K[^\"]+' | "
-                                "grep -E '^[0-9.]+$' | grep -v '^127\\.' | "
-                                "sed 's/^/  IPv4: /' | head -1",
+                                "grep -v '^127\\.' | grep -v '^::' | grep -v '^fe80' | "
+                                "sed 's/^/  IP: /' || echo '  IP: N/A (需要 qemu-guest-agent)'",
                                 vmid);
-                        int ipv4_result = system(cmd_buf);
-                        if (ipv4_result != 0) {
-                            printf("  IPv4: N/A\n");
-                        }
-                        
-                        // 获取 IPv6 地址
-                        snprintf(cmd_buf, sizeof(cmd_buf),
-                                "qm guest cmd %d network-get-interfaces 2>/dev/null | "
-                                "grep -A 2 '\"ip-address\"' | "
-                                "grep -oP '\"ip-address\"\\s*:\\s*\"\\K[^\"]+' | "
-                                "grep ':' | grep -v '^::1' | grep -v '^fe80' | "
-                                "sed 's/^/  IPv6: /' | head -1",
-                                vmid);
-                        int ipv6_result = system(cmd_buf);
-                        if (ipv6_result != 0) {
-                            printf("  IPv6: N/A\n");
-                        }
-                        
-                        // 如果两者都没有，显示提示
-                        if (ipv4_result != 0 && ipv6_result != 0) {
-                            printf("  提示: 需要安装 qemu-guest-agent\n");
-                        }
+                        system(cmd_buf);
                         
                         // MAC 地址
                         snprintf(cmd_buf, sizeof(cmd_buf),

@@ -1,9 +1,47 @@
 # vmanager - Proxmox 虚拟机管理工具
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-2.0.0-green.svg)](https://github.com/sscaifesu/vmanager)
+[![Version](https://img.shields.io/badge/version-3.0.0-green.svg)](https://github.com/sscaifesu/vmanager)
 
 一个强大的 Proxmox VE 虚拟机管理命令行工具，采用 C 语言开发，提供快速、高效的 VM 操作体验。
+
+## 版本选择
+
+本项目提供两个版本，请根据使用场景选择：
+
+| 版本 | 说明 | 适用场景 | 文档 |
+|------|------|----------|------|
+| **v3.0** | 统一版本（推荐） | 所有场景，智能检测环境 | [查看文档](v3/README.md) |
+| **v2.0** | 本地版本（稳定） | 仅在 PVE 服务器上使用 | [查看文档](v2/README.md) |
+
+### v3.0 - 统一版本（推荐）
+
+**智能检测，一个命令适用所有场景**
+
+- 自动检测运行环境（本地/远程）
+- 在 PVE 服务器上自动使用本地模式
+- 在其他平台上自动使用远程模式
+- 支持 macOS、Linux、Windows
+- 统一的用户体验
+
+```bash
+cd v3
+./vmanager list    # 自动检测环境并执行
+```
+
+### v2.0 - 本地版本（稳定）
+
+**简单高效，专注本地管理**
+
+- 直接使用 qm 命令
+- 高性能，低延迟
+- 代码简洁，易于维护
+- 仅在 PVE 服务器上运行
+
+```bash
+cd v2
+sudo ./vmanager list
+```
 
 ## 特性
 
@@ -55,8 +93,8 @@ sudo vmanager list
 
 ## 文档
 
-- [v2 完整文档](v2/README.md) - 最新版本使用指南
-- [v1 文档](v1/README.md) - 旧版本参考
+- [v3 完整文档](v3/README.md) - 统一版本（推荐）
+- [v2 完整文档](v2/README.md) - 本地版本（稳定）
 
 ## 项目结构
 
@@ -64,29 +102,28 @@ sudo vmanager list
 vmanager/
 ├── README.md           # 项目主文档
 ├── LICENSE             # GPL v3 许可证
-├── v1/                 # v1.0 版本（交互式）
-│   ├── vm_manager.c
+├── v2/                 # v2.0 本地版本
+│   ├── vmanager.c
 │   ├── Makefile
 │   └── README.md
-└── v2/                 # v2.0 版本（命令行）
+└── v3/                 # v3.0 统一版本
     ├── vmanager.c
-    ├── Makefile
-    ├── README.md
-    └── test.sh
+    └── README.md
 ```
 
 ## 版本说明
 
-### v2.0 (推荐)
-- 标准 Linux 命令行工具
-- 支持子命令和选项
-- 批量操作和范围支持
-- 脚本集成友好
+### v3.0 (推荐)
+- 智能环境检测
+- 支持本地和远程模式
+- 统一的用户体验
+- 跨平台支持
 
-### v1.0
-- 交互式界面
-- 简单易用
-- 适合手动操作
+### v2.0 (稳定)
+- 标准 Linux 命令行工具
+- 高性能本地管理
+- 代码简洁易维护
+- 专注 PVE 服务器
 
 ## 许可证
 
@@ -110,6 +147,6 @@ vmanager/
 
 ---
 
-**版本**: 2.0.0  
-**发布日期**: 2025-10-04  
+**版本**: 3.0.0  
+**发布日期**: 2025-10-05  
 **状态**: 稳定版本
