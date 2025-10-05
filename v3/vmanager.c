@@ -992,6 +992,12 @@ int list_vms_remote(Config *config, int verbose) {
                     config->host, config->port, config->node, vmid,
                     config->token_id, config->token_secret);
             
+            if (debug_mode) {
+                fprintf(stderr, COLOR_CYAN "调试: 获取 VM %d 配置\n" COLOR_RESET, vmid);
+                fprintf(stderr, "  URL: https://%s:%d/api2/json/nodes/%s/qemu/%d/config\n",
+                        config->host, config->port, config->node, vmid);
+            }
+            
             FILE *config_fp = popen(config_cmd, "r");
             if (config_fp) {
                 char config_response[32768] = {0};
@@ -1004,6 +1010,12 @@ int list_vms_remote(Config *config, int verbose) {
                     }
                 }
                 pclose(config_fp);
+                
+                if (debug_mode) {
+                    fprintf(stderr, COLOR_CYAN "调试: VM %d 配置响应\n" COLOR_RESET, vmid);
+                    fprintf(stderr, "%s\n", config_response);
+                    fprintf(stderr, COLOR_CYAN "调试: 配置响应长度 = %zu 字节\n" COLOR_RESET, config_total);
+                }
                 
                 // 提取 bootdisk
                 char bootdisk_key[32];
