@@ -230,6 +230,13 @@ static void draw_help(void) {
     
     mvwprintw(help_win, 0, 2, "Navigation: Up/Down Select | Left/Right Page | Home/End Jump");
     mvwprintw(help_win, 1, 2, "Actions: S Start | T Stop | R Reboot | D Destroy");
+    
+    // 在右侧添加版权信息
+    int max_x;
+    getmaxyx(help_win, (int){0}, max_x);
+    const char *copyright = "(C) 2025 YXWA Infosec Lab";
+    mvwprintw(help_win, 1, max_x - strlen(copyright) - 2, "%s", copyright);
+    
     mvwprintw(help_win, 2, 2, "Other: F5 Refresh | Q Quit");
     
     wrefresh(help_win);
