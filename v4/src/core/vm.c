@@ -246,8 +246,34 @@ int vm_clone(int vmid, int newid, const char *name) {
         return -1;
     }
     
-    cJSON_Delete(response);
-    printf("\033[32m✓\033[0m VM %d 已克隆到 %d\n", vmid, newid);
+    // 检查响应
+    cJSON *data_obj = cJSON_GetObjectItem(response, "data");
+    cJSON *errors = cJSON_GetObjectItem(response, "errors");
+    cJSON *message = cJSON_GetObjectItem(response, "message");
     
+    // 检查错误
+    if (message && cJSON_IsString(message)) {
+        fprintf(stderr, "\033[31m错误：%s\033[0m\n", message->valuestring);
+        cJSON_Delete(response);
+        return -1;
+    }
+    
+    if (errors) {
+        fprintf(stderr, "\033[31m错误：克隆失败\033[0m\n");
+        cJSON_Delete(response);
+        return -1;
+    }
+    
+    // 检查是否返回了任务 ID
+    if (data_obj && cJSON_IsString(data_obj)) {
+        const char *task_id = data_obj->valuestring;
+        printf("\033[33m提示：克隆任务已创建 (UPID: %s)\033[0m\n", task_id);
+        printf("\033[33m提示：克隆是异步操作，请稍后检查 VM 列表\033[0m\n");
+        printf("\033[32m✓\033[0m 克隆任务已提交\n");
+    } else {
+        printf("\033[32m✓\033[0m VM %d 克隆请求已发送到 %d\n", vmid, newid);
+    }
+    
+    cJSON_Delete(response);
     return 0;
 }
