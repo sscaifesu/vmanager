@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-linux:
+  build-linux-amd64:
     name: Build Linux x86_64
     runs-on: ubuntu-latest
     
@@ -40,9 +40,49 @@ jobs:
           name: linux-amd64
           path: dist/*
 
-  build-macos:
-    name: Build macOS
-    runs-on: macos-latest
+  build-linux-arm64:
+    name: Build Linux ARM64
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y libcurl4-openssl-dev:arm64 libncurses5-dev:arm64 || true
+          
+      - name: Setup cross-compile
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update || true
+          
+      - name: Build
+        working-directory: v4
+        run: |
+          make CC=aarch64-linux-gnu-gcc \
+               CFLAGS="-Wall -Wextra -O2 -std=c11 -Iinclude" \
+               LDFLAGS="-lcurl -lncurses -lm"
+        
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp v4/vmanager dist/vmanager-linux-arm64
+          chmod +x dist/vmanager-linux-arm64
+          cd dist
+          sha256sum vmanager-linux-arm64 > vmanager-linux-arm64.sha256
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: dist/*
+
+  build-macos-amd64:
+    name: Build macOS x86_64
+    runs-on: macos-13
     
     steps:
       - name: Checkout
@@ -69,9 +109,38 @@ jobs:
           name: macos-amd64
           path: dist/*
 
+  build-macos-arm64:
+    name: Build macOS ARM64
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: brew install curl ncurses
+        
+      - name: Build
+        working-directory: v4
+        run: make
+        
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp v4/vmanager dist/vmanager-macos-arm64
+          chmod +x dist/vmanager-macos-arm64
+          cd dist
+          shasum -a 256 vmanager-macos-arm64 > vmanager-macos-arm64.sha256
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: dist/*
+
   release:
     name: Create Release
-    needs: [build-linux, build-macos]
+    needs: [build-linux-amd64, build-linux-arm64, build-macos-amd64, build-macos-arm64]
     runs-on: ubuntu-latest
     
     steps:
@@ -87,7 +156,9 @@ jobs:
         run: |
           mkdir -p release
           cp artifacts/linux-amd64/* release/
+          cp artifacts/linux-arm64/* release/
           cp artifacts/macos-amd64/* release/
+          cp artifacts/macos-arm64/* release/
           cd release
           cat *.sha256 > SHA256SUMS
           ls -lh
@@ -113,7 +184,9 @@ jobs:
             ## 支持平台
             
             - Linux x86_64
-            - macOS x86_64
+            - Linux ARM64
+            - macOS x86_64 (Intel)
+            - macOS ARM64 (Apple Silicon)
             
             ## 安装方法
             
