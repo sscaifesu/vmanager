@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -802,12 +803,39 @@ int execute_api_command(Config *config, const char *cmd, int vmid) {
     return system(command);
 }
 
+// 辅助函数：从 JSON 中提取字符串值
+static char* extract_json_string(const char *json, const char *key, char *buffer, size_t buf_size) {
+    char search_key[128];
+    snprintf(search_key, sizeof(search_key), "\"%s\"", key);
+    
+    char *key_ptr = strstr(json, search_key);
+    if (key_ptr) {
+        char *colon = strchr(key_ptr, ':');
+        if (colon) {
+            colon++;
+            while (*colon == ' ' || *colon == '\t') colon++;
+            if (*colon == '"') {
+                char *quote1 = colon;
+                char *quote2 = strchr(quote1 + 1, '"');
+                if (quote2) {
+                    size_t len = quote2 - quote1 - 1;
+                    if (len < buf_size && len > 0) {
+                        strncpy(buffer, quote1 + 1, len);
+                        buffer[len] = '\0';
+                        return buffer;
+                    }
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
 int list_vms_remote(Config *config, int verbose) {
     char command[MAX_COMMAND];
     FILE *fp;
     char line[4096];
     int debug_mode = (getenv("VMANAGER_DEBUG") != NULL);
-    (void)verbose; // 暂时未使用，避免警告
     
     if (strlen(config->token_id) == 0) {
         fprintf(stderr, COLOR_YELLOW "警告：密码认证暂未实现，请使用 API Token\n" COLOR_RESET);
@@ -950,9 +978,139 @@ int list_vms_remote(Config *config, int verbose) {
             sscanf(mem_ptr, "\"maxmem\":%lld", &maxmem);
         }
         
+        // 详细模式：获取额外信息
+        char bootdisk[32] = "N/A";
+        char bridge[32] = "N/A";
+        char ipaddr[64] = "N/A";
+        
+        if (verbose && vmid > 0) {
+            // 获取 VM 配置
+            char config_cmd[MAX_COMMAND];
+            snprintf(config_cmd, sizeof(config_cmd),
+                    "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu/%d/config' "
+                    "-H 'Authorization: PVEAPIToken=%s=%s'",
+                    config->host, config->port, config->node, vmid,
+                    config->token_id, config->token_secret);
+            
+            FILE *config_fp = popen(config_cmd, "r");
+            if (config_fp) {
+                char config_response[32768] = {0};
+                size_t config_total = 0;
+                while (fgets(line, sizeof(line), config_fp) != NULL && config_total < sizeof(config_response) - 1) {
+                    size_t len = strlen(line);
+                    if (config_total + len < sizeof(config_response)) {
+                        strcat(config_response, line);
+                        config_total += len;
+                    }
+                }
+                pclose(config_fp);
+                
+                // 提取 bootdisk
+                char bootdisk_key[32];
+                if (extract_json_string(config_response, "bootdisk", bootdisk_key, sizeof(bootdisk_key))) {
+                    // 获取 bootdisk 大小
+                    char search_disk[128];
+                    snprintf(search_disk, sizeof(search_disk), "\"%s\"", bootdisk_key);
+                    char *disk_ptr = strstr(config_response, search_disk);
+                    if (disk_ptr) {
+                        char *size_ptr = strstr(disk_ptr, "size=");
+                        if (size_ptr) {
+                            float size_val = 0;
+                            char size_unit[8] = "";
+                            if (sscanf(size_ptr, "size=%f%7s", &size_val, size_unit) >= 1) {
+                                if (strcasecmp(size_unit, "G") == 0 || strcasecmp(size_unit, "GB") == 0) {
+                                    snprintf(bootdisk, sizeof(bootdisk), "%.2f", size_val);
+                                } else if (strcasecmp(size_unit, "M") == 0 || strcasecmp(size_unit, "MB") == 0) {
+                                    snprintf(bootdisk, sizeof(bootdisk), "%.2f", size_val / 1024.0);
+                                } else if (strcasecmp(size_unit, "T") == 0 || strcasecmp(size_unit, "TB") == 0) {
+                                    snprintf(bootdisk, sizeof(bootdisk), "%.2f", size_val * 1024.0);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 提取 bridge
+                char *net0_ptr = strstr(config_response, "\"net0\"");
+                if (net0_ptr) {
+                    char *bridge_ptr = strstr(net0_ptr, "bridge=");
+                    if (bridge_ptr) {
+                        bridge_ptr += 7; // 跳过 "bridge="
+                        char *comma = strchr(bridge_ptr, ',');
+                        char *quote = strchr(bridge_ptr, '"');
+                        char *end = comma;
+                        if (quote && (!comma || quote < comma)) end = quote;
+                        if (end) {
+                            size_t len = end - bridge_ptr;
+                            if (len < sizeof(bridge)) {
+                                strncpy(bridge, bridge_ptr, len);
+                                bridge[len] = '\0';
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 获取 IP 地址（仅当 VM 运行时）
+            if (strcmp(status, "running") == 0) {
+                char ip_cmd[MAX_COMMAND];
+                snprintf(ip_cmd, sizeof(ip_cmd),
+                        "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu/%d/agent/network-get-interfaces' "
+                        "-H 'Authorization: PVEAPIToken=%s=%s' 2>/dev/null",
+                        config->host, config->port, config->node, vmid,
+                        config->token_id, config->token_secret);
+                
+                FILE *ip_fp = popen(ip_cmd, "r");
+                if (ip_fp) {
+                    char ip_response[16384] = {0};
+                    size_t ip_total = 0;
+                    while (fgets(line, sizeof(line), ip_fp) != NULL && ip_total < sizeof(ip_response) - 1) {
+                        size_t len = strlen(line);
+                        if (ip_total + len < sizeof(ip_response)) {
+                            strcat(ip_response, line);
+                            ip_total += len;
+                        }
+                    }
+                    pclose(ip_fp);
+                    
+                    // 提取第一个非本地 IPv4 地址
+                    char *ip_ptr = ip_response;
+                    while ((ip_ptr = strstr(ip_ptr, "\"ip-address\"")) != NULL) {
+                        char *colon = strchr(ip_ptr, ':');
+                        if (colon) {
+                            colon++;
+                            while (*colon == ' ' || *colon == '\t') colon++;
+                            if (*colon == '"') {
+                                char *quote1 = colon;
+                                char *quote2 = strchr(quote1 + 1, '"');
+                                if (quote2) {
+                                    size_t len = quote2 - quote1 - 1;
+                                    if (len < sizeof(ipaddr) && len > 0) {
+                                        char temp_ip[64];
+                                        strncpy(temp_ip, quote1 + 1, len);
+                                        temp_ip[len] = '\0';
+                                        // 跳过本地地址和 IPv6
+                                        if (strncmp(temp_ip, "127.", 4) != 0 && 
+                                            strncmp(temp_ip, "::1", 3) != 0 &&
+                                            strncmp(temp_ip, "fe80:", 5) != 0 &&
+                                            strchr(temp_ip, ':') == NULL) {  // 不是 IPv6
+                                            strncpy(ipaddr, temp_ip, sizeof(ipaddr) - 1);
+                                            ipaddr[sizeof(ipaddr) - 1] = '\0';
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        ip_ptr++;
+                    }
+                }
+            }
+        }
+        
         // 打印 VM 信息
         printf("%-10d %-20s %-12s %-10d %-15s %-12s %-20s\n",
-               vmid, name, status, (int)(maxmem / 1024 / 1024), "N/A", "N/A", "N/A");
+               vmid, name, status, (int)(maxmem / 1024 / 1024), bootdisk, bridge, ipaddr);
         
         // 移动到下一个对象
         ptr = obj_end + 1;
