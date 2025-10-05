@@ -1,102 +1,169 @@
 /*
  * Proxmox API 封装
- * 使用 curl 命令行工具（兼容性更好）
- * 未来可以升级到 libcurl
+ * 使用 libcurl 进行 HTTP 请求
  */
 
 #define _POSIX_C_SOURCE 200809L
 #include "../../include/vmanager.h"
+#include <curl/curl.h>
 
 static Config *api_config = NULL;
+static CURL *curl_handle = NULL;
+
+// libcurl 写入回调函数
+struct MemoryStruct {
+    char *memory;
+    size_t size;
+};
+
+static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+    
+    char *ptr = realloc(mem->memory, mem->size + realsize + 1);
+    if (!ptr) {
+        fprintf(stderr, "错误：内存分配失败\n");
+        return 0;
+    }
+    
+    mem->memory = ptr;
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+    
+    return realsize;
+}
 
 int api_init(Config *config) {
     if (!config) return -1;
     api_config = config;
+    
+    // 初始化 libcurl
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl_handle = curl_easy_init();
+    
+    if (!curl_handle) {
+        fprintf(stderr, "错误：libcurl 初始化失败\n");
+        return -1;
+    }
+    
     return 0;
 }
 
-// 执行 curl 命令并返回 JSON
+// 执行 HTTP GET 请求并返回 JSON
 cJSON* api_get(const char *endpoint) {
-    if (!api_config || !endpoint) return NULL;
+    if (!api_config || !endpoint || !curl_handle) return NULL;
     
-    char command[2048];
-    snprintf(command, sizeof(command),
-            "curl -s -k 'https://%s:%d%s' "
-            "-H 'Authorization: PVEAPIToken=%s=%s'",
-            api_config->host, api_config->port, endpoint,
-            api_config->token_id, api_config->token_secret);
+    // 构建 URL
+    char url[1024];
+    snprintf(url, sizeof(url), "https://%s:%d%s",
+             api_config->host, api_config->port, endpoint);
+    
+    // 构建认证头
+    char auth_header[1024];
+    snprintf(auth_header, sizeof(auth_header),
+             "Authorization: PVEAPIToken=%s=%s",
+             api_config->token_id, api_config->token_secret);
     
     if (g_debug) {
         fprintf(stderr, "API GET: %s\n", endpoint);
     }
     
-    FILE *fp = popen(command, "r");
-    if (!fp) return NULL;
+    // 设置 HTTP 头
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, auth_header);
     
-    char *response = malloc(65536);
-    if (!response) {
-        pclose(fp);
-        return NULL;
-    }
+    // 准备接收数据
+    struct MemoryStruct chunk = {0};
+    chunk.memory = malloc(1);
+    chunk.size = 0;
     
-    size_t total = 0;
-    char line[4096];
-    response[0] = '\0';
+    // 配置 curl
+    curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+    curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 30L);
     
-    while (fgets(line, sizeof(line), fp) && total < 65535) {
-        size_t len = strlen(line);
-        if (total + len < 65535) {
-            strcat(response, line);
-            total += len;
+    // 执行请求
+    CURLcode res = curl_easy_perform(curl_handle);
+    
+    cJSON *json = NULL;
+    if (res != CURLE_OK) {
+        if (g_debug) {
+            fprintf(stderr, "curl_easy_perform() 失败: %s\n", curl_easy_strerror(res));
+        }
+    } else {
+        json = cJSON_Parse(chunk.memory);
+        if (!json && g_debug) {
+            fprintf(stderr, "JSON 解析失败: %s\n", chunk.memory);
         }
     }
-    pclose(fp);
     
-    cJSON *json = cJSON_Parse(response);
-    free(response);
+    free(chunk.memory);
+    curl_slist_free_all(headers);
     
     return json;
 }
 
 cJSON* api_post(const char *endpoint, cJSON *data) {
     (void)data;  // 未使用的参数，保留用于未来扩展
-    if (!api_config || !endpoint) return NULL;
+    if (!api_config || !endpoint || !curl_handle) return NULL;
     
-    char command[2048];
-    snprintf(command, sizeof(command),
-            "curl -s -k -X POST 'https://%s:%d%s' "
-            "-H 'Authorization: PVEAPIToken=%s=%s'",
-            api_config->host, api_config->port, endpoint,
-            api_config->token_id, api_config->token_secret);
+    // 构建 URL
+    char url[1024];
+    snprintf(url, sizeof(url), "https://%s:%d%s",
+             api_config->host, api_config->port, endpoint);
+    
+    // 构建认证头
+    char auth_header[1024];
+    snprintf(auth_header, sizeof(auth_header),
+             "Authorization: PVEAPIToken=%s=%s",
+             api_config->token_id, api_config->token_secret);
     
     if (g_debug) {
         fprintf(stderr, "API POST: %s\n", endpoint);
     }
     
-    FILE *fp = popen(command, "r");
-    if (!fp) return NULL;
+    // 设置 HTTP 头
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, auth_header);
     
-    char *response = malloc(65536);
-    if (!response) {
-        pclose(fp);
-        return NULL;
-    }
+    // 准备接收数据
+    struct MemoryStruct chunk = {0};
+    chunk.memory = malloc(1);
+    chunk.size = 0;
     
-    size_t total = 0;
-    char line[4096];
-    response[0] = '\0';
+    // 配置 curl
+    curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+    curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl_handle, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, "");
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 30L);
     
-    while (fgets(line, sizeof(line), fp) && total < 65535) {
-        size_t len = strlen(line);
-        if (total + len < 65535) {
-            strcat(response, line);
-            total += len;
+    // 执行请求
+    CURLcode res = curl_easy_perform(curl_handle);
+    
+    cJSON *json = NULL;
+    if (res != CURLE_OK) {
+        if (g_debug) {
+            fprintf(stderr, "curl_easy_perform() 失败: %s\n", curl_easy_strerror(res));
+        }
+    } else {
+        json = cJSON_Parse(chunk.memory);
+        if (!json && g_debug) {
+            fprintf(stderr, "JSON 解析失败: %s\n", chunk.memory);
         }
     }
-    pclose(fp);
     
-    cJSON *json = cJSON_Parse(response);
-    free(response);
+    free(chunk.memory);
+    curl_slist_free_all(headers);
     
     return json;
 }
@@ -295,67 +362,95 @@ int api_get_vm_status(int vmid, VMInfo *vm) {
 }
 
 int api_vm_action(int vmid, const char *action) {
-    if (!action) return -1;
+    if (!action || !curl_handle) return -1;
     
-    char command[2048];
+    char url[1024];
     char endpoint[256];
+    bool is_destroy = (strcmp(action, "destroy") == 0);
     
-    // destroy 操作需要使用 DELETE 方法
-    if (strcmp(action, "destroy") == 0) {
+    // destroy 操作使用 DELETE 方法
+    if (is_destroy) {
         snprintf(endpoint, sizeof(endpoint), "/api2/json/nodes/%s/qemu/%d",
                  api_config->node, vmid);
-        snprintf(command, sizeof(command),
-                "curl -s -k -X DELETE 'https://%s:%d%s' "
-                "-H 'Authorization: PVEAPIToken=%s=%s'",
-                api_config->host, api_config->port, endpoint,
-                api_config->token_id, api_config->token_secret);
     } else {
         // 其他操作使用 POST 到 status/<action>
         snprintf(endpoint, sizeof(endpoint), "/api2/json/nodes/%s/qemu/%d/status/%s",
                  api_config->node, vmid, action);
-        snprintf(command, sizeof(command),
-                "curl -s -k -X POST 'https://%s:%d%s' "
-                "-H 'Authorization: PVEAPIToken=%s=%s'",
-                api_config->host, api_config->port, endpoint,
-                api_config->token_id, api_config->token_secret);
     }
+    
+    snprintf(url, sizeof(url), "https://%s:%d%s",
+             api_config->host, api_config->port, endpoint);
+    
+    // 构建认证头
+    char auth_header[1024];
+    snprintf(auth_header, sizeof(auth_header),
+             "Authorization: PVEAPIToken=%s=%s",
+             api_config->token_id, api_config->token_secret);
     
     if (g_debug) {
-        fprintf(stderr, "API %s: %s\n", 
-                strcmp(action, "destroy") == 0 ? "DELETE" : "POST", endpoint);
+        fprintf(stderr, "API %s: %s\n", is_destroy ? "DELETE" : "POST", endpoint);
     }
     
-    FILE *fp = popen(command, "r");
-    if (!fp) return -1;
+    // 设置 HTTP 头
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, auth_header);
     
-    char *response = malloc(65536);
-    if (!response) {
-        pclose(fp);
-        return -1;
+    // 准备接收数据
+    struct MemoryStruct chunk = {0};
+    chunk.memory = malloc(1);
+    chunk.size = 0;
+    
+    // 配置 curl
+    curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+    curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+    
+    if (is_destroy) {
+        curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE");
+    } else {
+        curl_easy_setopt(curl_handle, CURLOPT_POST, 1L);
+        curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, "");
     }
     
-    size_t total = 0;
-    char line[4096];
-    response[0] = '\0';
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 30L);
     
-    while (fgets(line, sizeof(line), fp) && total < 65535) {
-        size_t len = strlen(line);
-        if (total + len < 65535) {
-            strcat(response, line);
-            total += len;
+    // 执行请求
+    CURLcode res = curl_easy_perform(curl_handle);
+    
+    int ret = -1;
+    if (res != CURLE_OK) {
+        if (g_debug) {
+            fprintf(stderr, "curl_easy_perform() 失败: %s\n", curl_easy_strerror(res));
+        }
+    } else {
+        cJSON *json = cJSON_Parse(chunk.memory);
+        if (json) {
+            ret = 0;
+            cJSON_Delete(json);
+        } else if (g_debug) {
+            fprintf(stderr, "JSON 解析失败: %s\n", chunk.memory);
         }
     }
-    pclose(fp);
     
-    cJSON *json = cJSON_Parse(response);
-    free(response);
+    free(chunk.memory);
+    curl_slist_free_all(headers);
     
-    if (!json) return -1;
+    // 重置 curl 选项以供下次使用
+    if (is_destroy) {
+        curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, NULL);
+    }
+    curl_easy_setopt(curl_handle, CURLOPT_POST, 0L);
     
-    cJSON_Delete(json);
-    return 0;
+    return ret;
 }
 
 void api_cleanup(void) {
-    // 清理工作（当前使用 curl 命令，无需清理）
+    if (curl_handle) {
+        curl_easy_cleanup(curl_handle);
+        curl_handle = NULL;
+    }
+    curl_global_cleanup();
 }

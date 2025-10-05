@@ -13,7 +13,7 @@ rm -f vmanager src/*.o src/core/*.o src/ui/*.o src/utils/*.o *.o
 
 # 编译标志
 CFLAGS="-Wall -Wextra -O2 -std=c11 -Iinclude"
-LDFLAGS="-lm"
+LDFLAGS="-lcurl -lm"
 
 # 编译源文件
 echo "Compiling cJSON.c..."

@@ -4,7 +4,7 @@
 # 编译器和标志
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -O2 -std=c11 -Iinclude
-LDFLAGS = -lm
+LDFLAGS = -lcurl -lm
 DEBUG_FLAGS = -g -DDEBUG
 
 # 目标和源文件

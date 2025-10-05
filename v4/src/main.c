@@ -13,7 +13,7 @@ bool g_debug = false;
 
 static void print_version(void) {
     printf("%s version %s\n\n", PROGRAM_NAME, VERSION);
-    printf("Proxmox 虚拟机管理工具 (cJSON Edition)\n");
+    printf("Proxmox 虚拟机管理工具\n");
     printf("作者：YXWA Infosec Lab (Crystal & evalEvil)\n");
     printf("许可：GNU General Public License v3.0\n");
     printf("项目：https://github.com/sscaifesu/vmanager\n\n");
