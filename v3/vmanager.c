@@ -97,7 +97,7 @@ int check_vm_exists(int vmid);
 
 // 远程模式函数
 int execute_api_command(Config *config, const char *cmd, int vmid);
-int list_vms_remote(Config *config);
+int list_vms_remote(Config *config, int verbose);
 
 // 通用函数
 int is_number(const char *str);
@@ -111,6 +111,7 @@ int main(int argc, char *argv[]) {
     int vmid_count = 0;
     int force = 0;
     int quiet = 0;
+    int verbose = 0;
     int opt;
     
     // 长选项定义
@@ -119,13 +120,14 @@ int main(int argc, char *argv[]) {
         {"version", no_argument,       0, 'V'},
         {"force",   no_argument,       0, 'f'},
         {"quiet",   no_argument,       0, 'q'},
+        {"verbose", no_argument,       0, 'v'},
         {"config",  no_argument,       0, 'c'},
         {"mode",    required_argument, 0, 'm'},
         {0, 0, 0, 0}
     };
     
     // 解析选项
-    while ((opt = getopt_long(argc, argv, "hVfqcm:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hVfqvcm:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'h':
                 print_help();
@@ -138,6 +140,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'q':
                 quiet = 1;
+                break;
+            case 'v':
+                verbose = 1;
                 break;
             case 'c':
                 cmd = CMD_CONFIG;
@@ -231,7 +236,7 @@ int main(int argc, char *argv[]) {
         if (mode == MODE_LOCAL) {
             return list_vms_local();
         } else {
-            return list_vms_remote(&config);
+            return list_vms_remote(&config, verbose);
         }
     }
     
@@ -797,11 +802,12 @@ int execute_api_command(Config *config, const char *cmd, int vmid) {
     return system(command);
 }
 
-int list_vms_remote(Config *config) {
+int list_vms_remote(Config *config, int verbose) {
     char command[MAX_COMMAND];
     FILE *fp;
     char line[4096];
     int debug_mode = (getenv("VMANAGER_DEBUG") != NULL);
+    (void)verbose; // 暂时未使用，避免警告
     
     if (strlen(config->token_id) == 0) {
         fprintf(stderr, COLOR_YELLOW "警告：密码认证暂未实现，请使用 API Token\n" COLOR_RESET);
