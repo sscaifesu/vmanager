@@ -98,7 +98,9 @@ int check_vm_exists(int vmid);
 
 // 远程模式函数
 int execute_api_command(Config *config, const char *cmd, int vmid);
+int status_vm_remote(Config *config, int vmid);
 int list_vms_remote(Config *config, int verbose);
+static char* extract_json_string(const char *json, const char *key, char *buffer, size_t buf_size);
 
 // 通用函数
 int is_number(const char *str);
@@ -440,7 +442,12 @@ int main(int argc, char *argv[]) {
                 result = execute_qm_command_silent(cmd_str, vmid);
             }
         } else {
-            result = execute_api_command(&config, cmd_str, vmid);
+            // 远程模式
+            if (cmd == CMD_STATUS) {
+                result = status_vm_remote(&config, vmid);
+            } else {
+                result = execute_api_command(&config, cmd_str, vmid);
+            }
         }
         
         if (result == 0) {
@@ -801,6 +808,220 @@ int execute_api_command(Config *config, const char *cmd, int vmid) {
     }
     
     return system(command);
+}
+
+int status_vm_remote(Config *config, int vmid) {
+    char command[MAX_COMMAND];
+    FILE *fp;
+    char line[4096];
+    
+    if (strlen(config->token_id) == 0) {
+        fprintf(stderr, COLOR_YELLOW "警告：密码认证暂未实现，请使用 API Token\n" COLOR_RESET);
+        return -1;
+    }
+    
+    printf(COLOR_BOLD "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" COLOR_RESET);
+    printf(COLOR_BOLD "VM %d 详细信息\n" COLOR_RESET, vmid);
+    printf(COLOR_BOLD "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" COLOR_RESET);
+    
+    // 获取 VM 状态
+    snprintf(command, sizeof(command),
+            "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu/%d/status/current' "
+            "-H 'Authorization: PVEAPIToken=%s=%s'",
+            config->host, config->port, config->node, vmid,
+            config->token_id, config->token_secret);
+    
+    fp = popen(command, "r");
+    if (fp == NULL) {
+        fprintf(stderr, COLOR_RED "错误：无法执行 API 请求\n" COLOR_RESET);
+        return -1;
+    }
+    
+    char status_response[32768] = {0};
+    size_t status_total = 0;
+    while (fgets(line, sizeof(line), fp) != NULL && status_total < sizeof(status_response) - 1) {
+        size_t len = strlen(line);
+        if (status_total + len < sizeof(status_response)) {
+            strcat(status_response, line);
+            status_total += len;
+        }
+    }
+    pclose(fp);
+    
+    // 提取基本信息
+    char status[32] = "N/A";
+    char name[64] = "N/A";
+    extract_json_string(status_response, "status", status, sizeof(status));
+    extract_json_string(status_response, "name", name, sizeof(name));
+    
+    printf(COLOR_CYAN "基本信息:\n" COLOR_RESET);
+    printf("  状态: %s\n", status);
+    printf("  名称: %s\n", name);
+    
+    // 获取 VM 配置
+    snprintf(command, sizeof(command),
+            "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu/%d/config' "
+            "-H 'Authorization: PVEAPIToken=%s=%s'",
+            config->host, config->port, config->node, vmid,
+            config->token_id, config->token_secret);
+    
+    fp = popen(command, "r");
+    if (fp) {
+        char config_response[32768] = {0};
+        size_t config_total = 0;
+        while (fgets(line, sizeof(line), fp) != NULL && config_total < sizeof(config_response) - 1) {
+            size_t len = strlen(line);
+            if (config_total + len < sizeof(config_response)) {
+                strcat(config_response, line);
+                config_total += len;
+            }
+        }
+        pclose(fp);
+        
+        printf("\n" COLOR_CYAN "配置信息:\n" COLOR_RESET);
+        
+        // 提取配置字段
+        char bootdisk[32] = "N/A";
+        char cores[16] = "N/A";
+        char memory[16] = "N/A";
+        
+        extract_json_string(config_response, "bootdisk", bootdisk, sizeof(bootdisk));
+        extract_json_string(config_response, "cores", cores, sizeof(cores));
+        extract_json_string(config_response, "memory", memory, sizeof(memory));
+        
+        printf("  bootdisk: %s\n", bootdisk);
+        printf("  cores: %s\n", cores);
+        printf("  memory: %s\n", memory);
+        printf("  name: %s\n", name);
+        
+        // 提取网络配置
+        char *net0_ptr = strstr(config_response, "\"net0\"");
+        if (net0_ptr) {
+            char *colon = strchr(net0_ptr, ':');
+            if (colon) {
+                colon++;
+                while (*colon == ' ' || *colon == '\t') colon++;
+                if (*colon == '"') {
+                    char *quote1 = colon;
+                    char *quote2 = strchr(quote1 + 1, '"');
+                    if (quote2) {
+                        printf("  net0: ");
+                        fwrite(quote1 + 1, 1, quote2 - quote1 - 1, stdout);
+                        printf("\n");
+                    }
+                }
+            }
+        }
+        
+        // 提取存储配置
+        printf("\n" COLOR_CYAN "存储信息:\n" COLOR_RESET);
+        char *ptr = config_response;
+        int disk_count = 0;
+        while (ptr != NULL && disk_count < 5) {
+            char *scsi_ptr = strstr(ptr, "\"scsi");
+            char *ide_ptr = strstr(ptr, "\"ide");
+            char *sata_ptr = strstr(ptr, "\"sata");
+            
+            // 找到最近的一个
+            ptr = NULL;
+            if (scsi_ptr != NULL) ptr = scsi_ptr;
+            if (ide_ptr != NULL && (ptr == NULL || ide_ptr < ptr)) ptr = ide_ptr;
+            if (sata_ptr != NULL && (ptr == NULL || sata_ptr < ptr)) ptr = sata_ptr;
+            
+            if (ptr == NULL) break;
+            char *colon = strchr(ptr, ':');
+            if (colon) {
+                char *key_start = ptr + 1;
+                char *key_end = strchr(key_start, '"');
+                if (key_end && key_end < colon) {
+                    colon++;
+                    while (*colon == ' ' || *colon == '\t') colon++;
+                    if (*colon == '"') {
+                        char *quote1 = colon;
+                        char *quote2 = strchr(quote1 + 1, '"');
+                        if (quote2) {
+                            printf("  ");
+                            fwrite(key_start, 1, key_end - key_start, stdout);
+                            printf(": ");
+                            fwrite(quote1 + 1, 1, quote2 - quote1 - 1, stdout);
+                            printf("\n");
+                            disk_count++;
+                        }
+                    }
+                }
+            }
+            ptr++;
+        }
+    }
+    
+    // 获取网络信息（仅当 running 时）
+    if (strcmp(status, "running") == 0) {
+        printf("\n" COLOR_CYAN "网络信息:\n" COLOR_RESET);
+        
+        snprintf(command, sizeof(command),
+                "curl -s -k 'https://%s:%d/api2/json/nodes/%s/qemu/%d/agent/network-get-interfaces' "
+                "-H 'Authorization: PVEAPIToken=%s=%s' 2>/dev/null",
+                config->host, config->port, config->node, vmid,
+                config->token_id, config->token_secret);
+        
+        fp = popen(command, "r");
+        if (fp) {
+            char ip_response[16384] = {0};
+            size_t ip_total = 0;
+            while (fgets(line, sizeof(line), fp) != NULL && ip_total < sizeof(ip_response) - 1) {
+                size_t len = strlen(line);
+                if (ip_total + len < sizeof(ip_response)) {
+                    strcat(ip_response, line);
+                    ip_total += len;
+                }
+            }
+            pclose(fp);
+            
+            // 提取 IPv4
+            char *ip_ptr = ip_response;
+            int found_ipv4 = 0, found_ipv6 = 0;
+            while ((ip_ptr = strstr(ip_ptr, "\"ip-address\"")) != NULL) {
+                char *colon = strchr(ip_ptr, ':');
+                if (colon) {
+                    colon++;
+                    while (*colon == ' ' || *colon == '\t') colon++;
+                    if (*colon == '"') {
+                        char *quote1 = colon;
+                        char *quote2 = strchr(quote1 + 1, '"');
+                        if (quote2) {
+                            char temp_ip[64];
+                            size_t len = quote2 - quote1 - 1;
+                            if (len < sizeof(temp_ip)) {
+                                strncpy(temp_ip, quote1 + 1, len);
+                                temp_ip[len] = '\0';
+                                
+                                // IPv4
+                                if (!found_ipv4 && strncmp(temp_ip, "127.", 4) != 0 && strchr(temp_ip, ':') == NULL) {
+                                    printf("  IPv4: %s\n", temp_ip);
+                                    found_ipv4 = 1;
+                                }
+                                // IPv6
+                                else if (!found_ipv6 && strchr(temp_ip, ':') != NULL && 
+                                         strncmp(temp_ip, "::1", 3) != 0 && strncmp(temp_ip, "fe80:", 5) != 0) {
+                                    printf("  IPv6: %s\n", temp_ip);
+                                    found_ipv6 = 1;
+                                }
+                            }
+                        }
+                    }
+                }
+                ip_ptr++;
+            }
+            
+            if (!found_ipv4 && !found_ipv6) {
+                printf("  提示: 需要安装 qemu-guest-agent\n");
+            }
+        }
+    }
+    
+    printf(COLOR_BOLD "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" COLOR_RESET);
+    
+    return 0;
 }
 
 // 辅助函数：从 JSON 中提取字符串值
