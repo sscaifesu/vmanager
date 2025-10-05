@@ -228,9 +228,9 @@ static void draw_help(void) {
     werase(help_win);
     wbkgd(help_win, COLOR_PAIR(COLOR_HELP));
     
-    mvwprintw(help_win, 0, 2, "Navigation: ↑/↓ Select | Enter Details");
-    mvwprintw(help_win, 1, 2, "Actions: S Start | T Stop | R Reboot | D Destroy | C Clone");
-    mvwprintw(help_win, 2, 2, "Other: F5 Refresh | Q Quit | H Help");
+    mvwprintw(help_win, 0, 2, "Navigation: Up/Down or j/k Select | Home/End Jump");
+    mvwprintw(help_win, 1, 2, "Actions: S Start | T Stop | R Reboot | D Destroy");
+    mvwprintw(help_win, 2, 2, "Other: F5 Refresh | Q Quit");
     
     wrefresh(help_win);
 }
@@ -268,6 +268,9 @@ static int load_tui_vm_list(void) {
 
 // 显示消息对话框
 static void show_message(const char *title, const char *message) {
+    // 禁用超时，防止自动刷新干扰
+    timeout(-1);
+    
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
     
@@ -291,10 +294,16 @@ static void show_message(const char *title, const char *message) {
     
     delwin(msg_win);
     refresh_all();
+    
+    // 恢复超时
+    timeout(1000);
 }
 
 // 显示确认对话框
 static bool show_confirm(const char *title, const char *message) {
+    // 禁用超时，防止自动刷新干扰
+    timeout(-1);
+    
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
     
@@ -320,6 +329,9 @@ static bool show_confirm(const char *title, const char *message) {
     
     delwin(msg_win);
     refresh_all();
+    
+    // 恢复超时
+    timeout(1000);
     
     return result;
 }
