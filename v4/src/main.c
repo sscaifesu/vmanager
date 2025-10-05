@@ -15,14 +15,11 @@ bool g_tui_mode = false;
 
 static void print_version(void) {
     printf("%s version %s\n\n", PROGRAM_NAME, VERSION);
-    printf("Proxmox 虚拟机管理工具\n");
+    printf("Proxmox 虚拟机管理工具\n\n");
+    printf("Copyright (C) 2025 YXWA Infosec Lab\n");
+    printf("作者：Crystal & evalEvil\n\n");
     printf("许可：GNU General Public License v3.0\n");
-    printf("项目：https://github.com/sscaifesu/vmanager\n\n");
-    printf("特性：\n");
-    printf("  • 使用 cJSON 进行科学的 JSON 解析\n");
-    printf("  • 智能检测运行环境（本地/远程）\n");
-    printf("  • 支持 CLI 和 TUI 双模式\n");
-    printf("  • 稳定、可靠、易维护\n");
+    printf("项目：https://github.com/sscaifesu/vmanager\n");
 }
 
 static void print_help(void) {
