@@ -24,6 +24,7 @@ VM.PowerMgmt   - 启动、停止、重启 VM
 | `VM.Allocate` | 删除 VM | destroy |
 | `VM.Clone` | 克隆 VM | clone |
 | `Datastore.AllocateSpace` | 分配存储空间 | clone, create |
+| `SDN.Use` | 使用 SDN 网络 | clone (如果使用 SDN) |
 
 ### 配置步骤
 
@@ -40,6 +41,7 @@ VM.PowerMgmt   - 启动、停止、重启 VM
    - `VM.Allocate`
    - `VM.Clone`
    - `Datastore.AllocateSpace`
+   - `SDN.Use` (如果使用 SDN 网络)
 
 #### 2. 创建 API Token
 
@@ -65,13 +67,16 @@ VM.PowerMgmt   - 启动、停止、重启 VM
 
 ```bash
 # 创建角色
-pveum role add VMManager -privs "VM.Audit,VM.PowerMgmt,VM.Allocate,VM.Clone,Datastore.AllocateSpace"
+pveum role add VMManager -privs "VM.Audit,VM.PowerMgmt,VM.Allocate,VM.Clone,Datastore.AllocateSpace,SDN.Use"
 
 # 创建 API Token（不使用 Privilege Separation）
 pveum user token add root@pam vmanager --privsep 0
 
 # 如果使用 Privilege Separation，需要分配权限
 pveum acl modify / -token 'root@pam!vmanager' -role VMManager
+
+# 如果 Token 已存在，修改角色权限
+pveum role modify VMManager -privs "VM.Audit,VM.PowerMgmt,VM.Allocate,VM.Clone,Datastore.AllocateSpace,SDN.Use"
 ```
 
 ### 权限测试
@@ -101,11 +106,16 @@ vmanager clone 100 101
 
 ```
 错误：Permission check failed (/storage/vmdata-1, Datastore.AllocateSpace)
+错误：Permission check failed (/sdn/zones/localnetwork/vmbr0, SDN.Use)
 ```
 
 **解决方案**：
-- 添加 `Datastore.AllocateSpace` 权限
+- 添加相应的权限（Datastore.AllocateSpace, SDN.Use 等）
 - 或者取消 API Token 的 Privilege Separation
+- 使用命令修改角色权限：
+  ```bash
+  pveum role modify VMManager -privs "VM.Audit,VM.PowerMgmt,VM.Allocate,VM.Clone,Datastore.AllocateSpace,SDN.Use"
+  ```
 
 #### 403 Forbidden
 
