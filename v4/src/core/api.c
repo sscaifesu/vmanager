@@ -101,6 +101,101 @@ cJSON* api_post(const char *endpoint, cJSON *data) {
     return json;
 }
 
+// 获取 VM 配置信息（网络、存储等）
+int api_get_vm_config_details(int vmid, VMInfo *vm) {
+    char endpoint[256];
+    snprintf(endpoint, sizeof(endpoint), "/api2/json/nodes/%s/qemu/%d/config",
+             api_config->node, vmid);
+    
+    cJSON *response = api_get(endpoint);
+    if (!response) return -1;
+    
+    cJSON *data = cJSON_GetObjectItem(response, "data");
+    if (!data) {
+        cJSON_Delete(response);
+        return -1;
+    }
+    
+    // 获取网桥信息
+    const char *net0 = json_get_string(data, "net0", NULL);
+    if (net0) {
+        const char *bridge_start = strstr(net0, "bridge=");
+        if (bridge_start) {
+            sscanf(bridge_start, "bridge=%31[^,]", vm->bridge);
+        }
+    }
+    
+    // 获取存储信息（从 bootdisk 或第一个磁盘）
+    const char *bootdisk = json_get_string(data, "bootdisk", NULL);
+    if (bootdisk) {
+        const char *disk_value = json_get_string(data, bootdisk, NULL);
+        if (disk_value) {
+            // 提取存储名称（例如：vmdata-1:vm-111-disk-0）
+            char *colon = strchr(disk_value, ':');
+            if (colon) {
+                size_t len = colon - disk_value;
+                if (len < sizeof(vm->storage)) {
+                    strncpy(vm->storage, disk_value, len);
+                    vm->storage[len] = '\0';
+                }
+            }
+        }
+    }
+    
+    // 设置配置文件路径
+    snprintf(vm->config_file, sizeof(vm->config_file), 
+             "/etc/pve/nodes/%s/qemu-server/%d.conf", api_config->node, vmid);
+    
+    cJSON_Delete(response);
+    return 0;
+}
+
+// 获取 VM IP 地址（通过 qemu-guest-agent）
+int api_get_vm_ip(int vmid, VMInfo *vm) {
+    if (strcmp(vm->status, "running") != 0) {
+        return 0; // 只有运行中的 VM 才能获取 IP
+    }
+    
+    char endpoint[256];
+    snprintf(endpoint, sizeof(endpoint), 
+             "/api2/json/nodes/%s/qemu/%d/agent/network-get-interfaces",
+             api_config->node, vmid);
+    
+    cJSON *response = api_get(endpoint);
+    if (!response) return -1;
+    
+    cJSON *data = cJSON_GetObjectItem(response, "data");
+    if (!cJSON_IsArray(data)) {
+        cJSON_Delete(response);
+        return -1;
+    }
+    
+    // 遍历网络接口
+    cJSON *iface = NULL;
+    cJSON_ArrayForEach(iface, data) {
+        cJSON *ip_addresses = cJSON_GetObjectItem(iface, "ip-addresses");
+        if (!cJSON_IsArray(ip_addresses)) continue;
+        
+        cJSON *ip_addr = NULL;
+        cJSON_ArrayForEach(ip_addr, ip_addresses) {
+            const char *ip = json_get_string(ip_addr, "ip-address", NULL);
+            const char *ip_type = json_get_string(ip_addr, "ip-address-type", NULL);
+            
+            if (ip && ip_type && strcmp(ip_type, "ipv4") == 0) {
+                // 跳过回环地址
+                if (strncmp(ip, "127.", 4) != 0) {
+                    strncpy(vm->ip_address, ip, sizeof(vm->ip_address) - 1);
+                    cJSON_Delete(response);
+                    return 0;
+                }
+            }
+        }
+    }
+    
+    cJSON_Delete(response);
+    return 0;
+}
+
 int api_get_vm_list(VMInfo **vms, int *count) {
     if (!vms || !count) return -1;
     
@@ -134,6 +229,12 @@ int api_get_vm_list(VMInfo **vms, int *count) {
         vm->disk = (uint64_t)json_get_double(vm_json, "disk", 0);
         vm->cpu_percent = json_get_double(vm_json, "cpu", 0) * 100;
         vm->uptime = json_get_int(vm_json, "uptime", 0);
+        
+        // 初始化新字段
+        strcpy(vm->ip_address, "N/A");
+        strcpy(vm->bridge, "N/A");
+        strcpy(vm->storage, "N/A");
+        vm->config_file[0] = '\0';
     }
     
     cJSON_Delete(response);
@@ -167,7 +268,20 @@ int api_get_vm_status(int vmid, VMInfo *vm) {
     vm->cpu_percent = json_get_double(data, "cpu", 0) * 100;
     vm->uptime = json_get_int(data, "uptime", 0);
     
+    // 初始化新字段
+    strcpy(vm->ip_address, "N/A");
+    strcpy(vm->bridge, "N/A");
+    strcpy(vm->storage, "N/A");
+    vm->config_file[0] = '\0';
+    
     cJSON_Delete(response);
+    
+    // 获取配置详情（网络、存储等）
+    api_get_vm_config_details(vmid, vm);
+    
+    // 获取 IP 地址（如果 VM 正在运行）
+    api_get_vm_ip(vmid, vm);
+    
     return 0;
 }
 

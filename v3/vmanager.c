@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/stat.h>
+#include "cJSON.h"
 
 #define VERSION "3.0.0"
 #define PROGRAM_NAME "vmanager"
@@ -100,7 +101,11 @@ int check_vm_exists(int vmid);
 int execute_api_command(Config *config, const char *cmd, int vmid);
 int status_vm_remote(Config *config, int vmid);
 int list_vms_remote(Config *config, int verbose);
-static char* extract_json_string(const char *json, const char *key, char *buffer, size_t buf_size);
+
+// cJSON 辅助函数
+const char* cjson_get_string(cJSON *json, const char *key, const char *default_value);
+int cjson_get_int(cJSON *json, const char *key, int default_value);
+double cjson_get_double(cJSON *json, const char *key, double default_value);
 
 // 通用函数
 int is_number(const char *str);
@@ -1019,32 +1024,31 @@ int status_vm_remote(Config *config, int vmid) {
     return 0;
 }
 
-// 辅助函数：从 JSON 中提取字符串值
-static char* extract_json_string(const char *json, const char *key, char *buffer, size_t buf_size) {
-    char search_key[128];
-    snprintf(search_key, sizeof(search_key), "\"%s\":", key);
-    
-    char *key_ptr = strstr(json, search_key);
-    if (key_ptr) {
-        char *colon = strchr(key_ptr, ':');
-        if (colon) {
-            colon++;
-            while (*colon == ' ' || *colon == '\t') colon++;
-            if (*colon == '"') {
-                char *quote1 = colon;
-                char *quote2 = strchr(quote1 + 1, '"');
-                if (quote2) {
-                    size_t len = quote2 - quote1 - 1;
-                    if (len < buf_size && len > 0) {
-                        strncpy(buffer, quote1 + 1, len);
-                        buffer[len] = '\0';
-                        return buffer;
-                    }
-                }
-            }
-        }
+// cJSON 辅助函数：安全获取字符串
+const char* cjson_get_string(cJSON *json, const char *key, const char *default_value) {
+    cJSON *item = cJSON_GetObjectItem(json, key);
+    if (item && cJSON_IsString(item)) {
+        return item->valuestring;
     }
-    return NULL;
+    return default_value;
+}
+
+// cJSON 辅助函数：安全获取整数
+int cjson_get_int(cJSON *json, const char *key, int default_value) {
+    cJSON *item = cJSON_GetObjectItem(json, key);
+    if (item && cJSON_IsNumber(item)) {
+        return item->valueint;
+    }
+    return default_value;
+}
+
+// cJSON 辅助函数：安全获取浮点数
+double cjson_get_double(cJSON *json, const char *key, double default_value) {
+    cJSON *item = cJSON_GetObjectItem(json, key);
+    if (item && cJSON_IsNumber(item)) {
+        return item->valuedouble;
+    }
+    return default_value;
 }
 
 int list_vms_remote(Config *config, int verbose) {

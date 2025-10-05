@@ -41,6 +41,8 @@ typedef struct {
     char ip_address[64];
     char bridge[32];
     char bootdisk[64];
+    char storage[64];     // 存储位置
+    char config_file[256]; // 配置文件路径
     int uptime;           // seconds
 } VMInfo;
 
@@ -86,6 +88,8 @@ cJSON* api_post(const char *endpoint, cJSON *data);
 int api_get_vm_list(VMInfo **vms, int *count);
 int api_get_vm_status(int vmid, VMInfo *vm);
 int api_vm_action(int vmid, const char *action);
+int api_get_vm_config_details(int vmid, VMInfo *vm);
+int api_get_vm_ip(int vmid, VMInfo *vm);
 void api_cleanup(void);
 
 // core/config.c

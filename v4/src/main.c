@@ -68,7 +68,8 @@ int main(int argc, char *argv[]) {
     int option_index = 0;
     char config_file[512] = {0};
     
-    while ((opt = getopt_long(argc, argv, "ctC:m:vdhV", long_options, &option_index)) != -1) {
+    // 使用 + 前缀让 getopt 在遇到第一个非选项参数时停止
+    while ((opt = getopt_long(argc, argv, "+ctC:m:vdhV", long_options, &option_index)) != -1) {
         switch (opt) {
             case 'c':
                 g_ui_mode = UI_CLI;

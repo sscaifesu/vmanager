@@ -24,12 +24,20 @@ int vm_list(bool verbose) {
         return 0;
     }
     
+    // 详细模式下获取额外信息
+    if (verbose) {
+        for (int i = 0; i < count; i++) {
+            api_get_vm_config_details(vms[i].vmid, &vms[i]);
+            api_get_vm_ip(vms[i].vmid, &vms[i]);
+        }
+    }
+    
     // 打印表头
     printf("\033[1m");  // 粗体
     if (verbose) {
-        printf("%-6s %-20s %-10s %-6s %-10s %-10s %-10s %-15s\n",
-               "VMID", "NAME", "STATUS", "CPU%", "MEM", "DISK", "UPTIME", "IP");
-        printf("─────────────────────────────────────────────────────────────────────────────────────────────\n");
+        printf("%-6s %-20s %-10s %-6s %-10s %-12s %-15s %-12s\n",
+               "VMID", "NAME", "STATUS", "CPU%", "MEM", "BRIDGE", "IP", "STORAGE");
+        printf("────────────────────────────────────────────────────────────────────────────────────────────────────────\n");
     } else {
         printf("%-6s %-20s %-10s %-6s %-10s\n",
                "VMID", "NAME", "STATUS", "CPU%", "MEM");
@@ -42,15 +50,15 @@ int vm_list(bool verbose) {
         VMInfo *vm = &vms[i];
         
         if (verbose) {
-            printf("%-6d %-20s %-10s %5.1f%% %-10s %-10s %-10s %-15s\n",
+            printf("%-6d %-20s %-10s %5.1f%% %-10s %-12s %-15s %-12s\n",
                    vm->vmid,
                    vm->name,
                    vm->status,
                    vm->cpu_percent,
                    format_bytes(vm->mem),
-                   format_bytes(vm->disk),
-                   format_uptime(vm->uptime),
-                   vm->ip_address[0] ? vm->ip_address : "N/A");
+                   vm->bridge,
+                   vm->ip_address,
+                   vm->storage);
         } else {
             printf("%-6d %-20s %-10s %5.1f%% %-10s\n",
                    vm->vmid,
@@ -83,29 +91,29 @@ int vm_status(int vmid) {
     printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
     
     printf("\033[36m基本信息:\033[0m\n");
-    printf("  VMID:     %d\n", vm.vmid);
-    printf("  名称:     %s\n", vm.name);
-    printf("  状态:     %s\n", vm.status);
-    printf("  运行时间: %s\n", format_uptime(vm.uptime));
+    printf("  VMID:       %d\n", vm.vmid);
+    printf("  名称:       %s\n", vm.name);
+    printf("  状态:       %s\n", vm.status);
+    printf("  运行时间:   %s\n", format_uptime(vm.uptime));
+    
+    printf("\n\033[36m网络信息:\033[0m\n");
+    printf("  网桥:       %s\n", vm.bridge);
+    printf("  IP 地址:    %s\n", vm.ip_address);
     
     printf("\n\033[36m资源配置:\033[0m\n");
-    printf("  CPU:      %d 核\n", vm.cpus);
-    printf("  CPU 使用: %.2f%%\n", vm.cpu_percent);
-    printf("  内存:     %s / %s (%.1f%%)\n",
+    printf("  CPU:        %d 核\n", vm.cpus);
+    printf("  CPU 使用:   %.2f%%\n", vm.cpu_percent);
+    printf("  内存:       %s / %s (%.1f%%)\n",
            format_bytes(vm.mem),
            format_bytes(vm.maxmem),
            vm.maxmem > 0 ? (vm.mem * 100.0 / vm.maxmem) : 0);
-    printf("  磁盘:     %s / %s\n",
+    printf("  磁盘:       %s / %s\n",
            format_bytes(vm.disk),
            format_bytes(vm.maxdisk));
     
-    if (vm.ip_address[0]) {
-        printf("\n\033[36m网络信息:\033[0m\n");
-        printf("  IP 地址:  %s\n", vm.ip_address);
-        if (vm.bridge[0]) {
-            printf("  网桥:     %s\n", vm.bridge);
-        }
-    }
+    printf("\n\033[36m存储信息:\033[0m\n");
+    printf("  存储位置:   %s\n", vm.storage);
+    printf("  配置文件:   %s\n", vm.config_file[0] ? vm.config_file : "N/A");
     
     printf("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
     
