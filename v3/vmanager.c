@@ -924,51 +924,20 @@ int status_vm_remote(Config *config, int vmid) {
             }
         }
         
-        // 提取存储配置
+        // 提取存储配置 - 使用简单直接的方法
         printf("\n" COLOR_CYAN "存储信息:\n" COLOR_RESET);
-        char *ptr = config_response;
-        int disk_count = 0;
-        while (ptr != NULL && disk_count < 5) {
-            char *scsi_ptr = strstr(ptr, "\"scsi");
-            char *ide_ptr = strstr(ptr, "\"ide");
-            char *sata_ptr = strstr(ptr, "\"sata");
-            char *virtio_ptr = strstr(ptr, "\"virtio");
-            
-            // 找到最近的一个
-            ptr = NULL;
-            if (scsi_ptr != NULL) ptr = scsi_ptr;
-            if (ide_ptr != NULL && (ptr == NULL || ide_ptr < ptr)) ptr = ide_ptr;
-            if (sata_ptr != NULL && (ptr == NULL || sata_ptr < ptr)) ptr = sata_ptr;
-            if (virtio_ptr != NULL && (ptr == NULL || virtio_ptr < ptr)) ptr = virtio_ptr;
-            
-            if (ptr == NULL) break;
-            
-            // 检查是否是存储设备（后面必须跟数字）
-            char *key_start = ptr + 1;
-            char *key_end = strchr(key_start, '"');
-            if (key_end) {
-                // 检查最后一个字符是否是数字
-                if (key_end > key_start && isdigit(*(key_end - 1))) {
-                    char *colon = strchr(key_end, ':');
-                    if (colon) {
-                        colon++;
-                        while (*colon == ' ' || *colon == '\t') colon++;
-                        if (*colon == '"') {
-                            char *quote1 = colon;
-                            char *quote2 = strchr(quote1 + 1, '"');
-                            if (quote2) {
-                                printf("  ");
-                                fwrite(key_start, 1, key_end - key_start, stdout);
-                                printf(": ");
-                                fwrite(quote1 + 1, 1, quote2 - quote1 - 1, stdout);
-                                printf("\n");
-                                disk_count++;
-                            }
-                        }
-                    }
-                }
+        
+        // 直接提取已知的存储设备字段
+        const char *disk_keys[] = {"scsi0", "scsi1", "scsi2", "scsi3", 
+                                    "ide0", "ide1", "ide2", "ide3",
+                                    "sata0", "sata1", "sata2", "sata3",
+                                    "virtio0", "virtio1", "virtio2", "virtio3", NULL};
+        
+        for (int i = 0; disk_keys[i] != NULL && i < 10; i++) {
+            char disk_value[256];
+            if (extract_json_string(config_response, disk_keys[i], disk_value, sizeof(disk_value))) {
+                printf("  %s: %s\n", disk_keys[i], disk_value);
             }
-            ptr++;
         }
     }
     
