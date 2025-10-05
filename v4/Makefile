@@ -4,7 +4,7 @@
 # 编译器和标志
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -O2 -std=c11 -Iinclude
-LDFLAGS = -lcurl -lm
+LDFLAGS = -lcurl -lncurses -lm
 DEBUG_FLAGS = -g -DDEBUG
 
 # 目标和源文件
@@ -15,7 +15,7 @@ MANDIR = $(PREFIX)/share/man/man1
 
 # 源文件
 CORE_SRCS = src/core/api.c src/core/config.c src/core/vm.c
-UI_SRCS = src/ui/cli.c
+UI_SRCS = src/ui/cli.c src/ui/tui.c
 UTILS_SRCS = src/utils/json.c src/utils/common.c
 MAIN_SRC = src/main.c
 LIB_SRCS = cJSON.c
@@ -112,6 +112,7 @@ src/core/api.o: src/core/api.c include/vmanager.h cJSON.h
 src/core/config.o: src/core/config.c include/vmanager.h
 src/core/vm.o: src/core/vm.c include/vmanager.h
 src/ui/cli.o: src/ui/cli.c include/vmanager.h
+src/ui/tui.o: src/ui/tui.c include/vmanager.h
 src/utils/json.o: src/utils/json.c include/vmanager.h cJSON.h
 src/utils/common.o: src/utils/common.c include/vmanager.h
 cJSON.o: cJSON.c cJSON.h
