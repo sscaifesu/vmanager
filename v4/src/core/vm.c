@@ -220,3 +220,34 @@ int vm_destroy(int vmid, bool force) {
     printf("\033[32m✓\033[0m VM %d 已销毁\n", vmid);
     return 0;
 }
+
+// 克隆 VM
+int vm_clone(int vmid, int newid, const char *name) {
+    printf("正在克隆 VM %d 到 %d...\n", vmid, newid);
+    
+    // 构建 API 端点
+    char endpoint[512];
+    if (name) {
+        snprintf(endpoint, sizeof(endpoint), 
+                "/api2/json/nodes/%s/qemu/%d/clone?newid=%d&name=%s",
+                "pve", vmid, newid, name);
+    } else {
+        snprintf(endpoint, sizeof(endpoint), 
+                "/api2/json/nodes/%s/qemu/%d/clone?newid=%d",
+                "pve", vmid, newid);
+    }
+    
+    // 调用 API（clone 使用 POST）
+    extern cJSON* api_post(const char *endpoint, cJSON *data);
+    cJSON *response = api_post(endpoint, NULL);
+    
+    if (!response) {
+        fprintf(stderr, "错误：无法克隆 VM %d\n", vmid);
+        return -1;
+    }
+    
+    cJSON_Delete(response);
+    printf("\033[32m✓\033[0m VM %d 已克隆到 %d\n", vmid, newid);
+    
+    return 0;
+}

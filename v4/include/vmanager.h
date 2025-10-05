@@ -107,6 +107,7 @@ int vm_restart(int vmid);
 int vm_suspend(int vmid);
 int vm_resume(int vmid);
 int vm_destroy(int vmid, bool force);
+int vm_clone(int vmid, int newid, const char *name);
 
 // ui/cli.c
 int cli_main(int argc, char *argv[]);

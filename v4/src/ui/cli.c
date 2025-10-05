@@ -174,10 +174,10 @@ int cli_main(int argc, char *argv[]) {
         return vm_resume(vmid);
     }
     
-    // delete 命令（推荐）和 destroy 命令（别名）
-    if (strcmp(command, "delete") == 0 || strcmp(command, "destroy") == 0) {
+    // destroy 命令
+    if (strcmp(command, "destroy") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s %s VMID [-f|--force]\n", PROGRAM_NAME, command);
+            fprintf(stderr, "用法: %s destroy VMID [-f|--force]\n", PROGRAM_NAME);
             return 1;
         }
         
@@ -193,6 +193,29 @@ int cli_main(int argc, char *argv[]) {
         }
         
         return vm_destroy(vmid, force);
+    }
+    
+    // clone 命令
+    if (strcmp(command, "clone") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "用法: %s clone VMID NEWID [--name NAME]\n", PROGRAM_NAME);
+            return 1;
+        }
+        
+        int vmid = atoi(argv[1]);
+        int newid = atoi(argv[2]);
+        
+        if (vmid <= 0 || newid <= 0) {
+            fprintf(stderr, "错误：无效的 VMID\n");
+            return 1;
+        }
+        
+        const char *name = NULL;
+        if (argc > 4 && strcmp(argv[3], "--name") == 0) {
+            name = argv[4];
+        }
+        
+        return vm_clone(vmid, newid, name);
     }
     
     // 未知命令
