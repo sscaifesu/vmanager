@@ -228,7 +228,7 @@ static void draw_help(void) {
     werase(help_win);
     wbkgd(help_win, COLOR_PAIR(COLOR_HELP));
     
-    mvwprintw(help_win, 0, 2, "Navigation: Up/Down or j/k Select | Home/End Jump");
+    mvwprintw(help_win, 0, 2, "Navigation: Up/Down Select | Left/Right Page | Home/End Jump");
     mvwprintw(help_win, 1, 2, "Actions: S Start | T Stop | R Reboot | D Destroy");
     mvwprintw(help_win, 2, 2, "Other: F5 Refresh | Q Quit");
     
@@ -360,7 +360,6 @@ static void handle_key(int ch) {
     
     switch (ch) {
         case KEY_UP:
-        case 'k':
             if (selected_index > 0) {
                 selected_index--;
                 if (selected_index < scroll_offset) {
@@ -370,9 +369,34 @@ static void handle_key(int ch) {
             break;
             
         case KEY_DOWN:
-        case 'j':
             if (selected_index < vm_count - 1) {
                 selected_index++;
+                if (selected_index >= scroll_offset + visible_lines) {
+                    scroll_offset = selected_index - visible_lines + 1;
+                }
+            }
+            break;
+            
+        case KEY_LEFT:
+        case KEY_PPAGE:  // Page Up
+            // 向上翻页
+            if (selected_index > 0) {
+                selected_index -= visible_lines;
+                if (selected_index < 0) {
+                    selected_index = 0;
+                }
+                scroll_offset = selected_index;
+            }
+            break;
+            
+        case KEY_RIGHT:
+        case KEY_NPAGE:  // Page Down
+            // 向下翻页
+            if (selected_index < vm_count - 1) {
+                selected_index += visible_lines;
+                if (selected_index >= vm_count) {
+                    selected_index = vm_count - 1;
+                }
                 if (selected_index >= scroll_offset + visible_lines) {
                     scroll_offset = selected_index - visible_lines + 1;
                 }
