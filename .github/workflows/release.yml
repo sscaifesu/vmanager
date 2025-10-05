@@ -48,23 +48,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-          sudo apt-get install -y libcurl4-openssl-dev:arm64 libncurses5-dev:arm64 || true
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
           
-      - name: Setup cross-compile
+      - name: Build in ARM64 container
         run: |
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update || true
-          
-      - name: Build
-        working-directory: v4
-        run: |
-          make CC=aarch64-linux-gnu-gcc \
-               CFLAGS="-Wall -Wextra -O2 -std=c11 -Iinclude" \
-               LDFLAGS="-lcurl -lncurses -lm"
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace/v4 \
+            arm64v8/ubuntu:22.04 \
+            bash -c "
+              apt-get update && \
+              apt-get install -y build-essential libcurl4-openssl-dev libncurses5-dev && \
+              make clean && \
+              make
+            "
         
       - name: Prepare artifact
         run: |
