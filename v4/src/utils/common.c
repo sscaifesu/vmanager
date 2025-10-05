@@ -5,6 +5,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 #include "../../include/vmanager.h"
+#include <ctype.h>
 
 // 检查字符串是否为数字
 bool is_number(const char *str) {

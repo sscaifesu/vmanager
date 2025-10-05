@@ -5,6 +5,70 @@
 
 #include "../../include/vmanager.h"
 
+// 批量执行 VM 操作的辅助函数
+static int batch_vm_operation(int argc, char *argv[], int (*operation)(int), const char *op_name) {
+    int success = 0, failed = 0;
+    
+    for (int i = 1; i < argc; i++) {
+        // 检查是否包含范围或逗号分隔
+        if (strchr(argv[i], '-') && !is_number(argv[i])) {
+            // 范围格式: 111-115
+            int vmids[MAX_VMIDS];
+            int count = 0;
+            
+            if (parse_vmid_range(argv[i], vmids, &count) == 0) {
+                for (int j = 0; j < count; j++) {
+                    if (operation(vmids[j]) == 0) {
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                }
+            } else {
+                fprintf(stderr, "错误：无效的范围格式: %s\n", argv[i]);
+                failed++;
+            }
+        } else if (strchr(argv[i], ',')) {
+            // 逗号分隔: 111,112,113
+            int vmids[MAX_VMIDS];
+            int count = 0;
+            
+            if (parse_vmid_range(argv[i], vmids, &count) == 0) {
+                for (int j = 0; j < count; j++) {
+                    if (operation(vmids[j]) == 0) {
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                }
+            } else {
+                fprintf(stderr, "错误：无效的格式: %s\n", argv[i]);
+                failed++;
+            }
+        } else {
+            // 单个 VMID
+            int vmid = atoi(argv[i]);
+            if (vmid > 0) {
+                if (operation(vmid) == 0) {
+                    success++;
+                } else {
+                    failed++;
+                }
+            } else {
+                fprintf(stderr, "错误：无效的 VMID: %s\n", argv[i]);
+                failed++;
+            }
+        }
+    }
+    
+    if (success + failed > 1) {
+        printf("\n%s 总计: \033[32m%d 成功\033[0m, \033[31m%d 失败\033[0m\n", 
+               op_name, success, failed);
+    }
+    
+    return (failed > 0) ? 1 : 0;
+}
+
 // CLI 主函数
 int cli_main(int argc, char *argv[]) {
     if (argc < 1) {
@@ -49,129 +113,56 @@ int cli_main(int argc, char *argv[]) {
     // start 命令
     if (strcmp(command, "start") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s start VMID [VMID...]\n", PROGRAM_NAME);
+            fprintf(stderr, "用法: %s start VMID [VMID...] [RANGE...]\n", PROGRAM_NAME);
+            fprintf(stderr, "示例: %s start 111 112 113-115 120,121,122\n", PROGRAM_NAME);
             return 1;
         }
         
-        int success = 0, failed = 0;
-        
-        for (int i = 1; i < argc; i++) {
-            // 检查是否为范围
-            if (strchr(argv[i], '-') || strchr(argv[i], ',')) {
-                int vmids[MAX_VMIDS];
-                int count = 0;
-                
-                if (parse_vmid_range(argv[i], vmids, &count) == 0) {
-                    for (int j = 0; j < count; j++) {
-                        if (vm_start(vmids[j]) == 0) {
-                            success++;
-                        } else {
-                            failed++;
-                        }
-                    }
-                }
-            } else {
-                int vmid = atoi(argv[i]);
-                if (vmid > 0) {
-                    if (vm_start(vmid) == 0) {
-                        success++;
-                    } else {
-                        failed++;
-                    }
-                }
-            }
-        }
-        
-        if (success + failed > 1) {
-            printf("\n总计: %d 成功, %d 失败\n", success, failed);
-        }
-        
-        return (failed > 0) ? 1 : 0;
+        return batch_vm_operation(argc, argv, vm_start, "启动");
     }
     
     // stop 命令
     if (strcmp(command, "stop") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s stop VMID [VMID...]\n", PROGRAM_NAME);
+            fprintf(stderr, "用法: %s stop VMID [VMID...] [RANGE...]\n", PROGRAM_NAME);
+            fprintf(stderr, "示例: %s stop 111 112 113-115 120,121,122\n", PROGRAM_NAME);
             return 1;
         }
         
-        int success = 0, failed = 0;
-        
-        for (int i = 1; i < argc; i++) {
-            int vmid = atoi(argv[i]);
-            if (vmid > 0) {
-                if (vm_stop(vmid) == 0) {
-                    success++;
-                } else {
-                    failed++;
-                }
-            }
-        }
-        
-        if (success + failed > 1) {
-            printf("\n总计: %d 成功, %d 失败\n", success, failed);
-        }
-        
-        return (failed > 0) ? 1 : 0;
+        return batch_vm_operation(argc, argv, vm_stop, "停止");
     }
     
     // reboot 命令（推荐）和 restart 命令（别名）
     if (strcmp(command, "reboot") == 0 || strcmp(command, "restart") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s %s VMID [VMID...]\n", PROGRAM_NAME, command);
+            fprintf(stderr, "用法: %s %s VMID [VMID...] [RANGE...]\n", PROGRAM_NAME, command);
+            fprintf(stderr, "示例: %s %s 111 112 113-115 120,121,122\n", PROGRAM_NAME, command);
             return 1;
         }
         
-        int success = 0, failed = 0;
-        
-        for (int i = 1; i < argc; i++) {
-            int vmid = atoi(argv[i]);
-            if (vmid > 0) {
-                if (vm_restart(vmid) == 0) {
-                    success++;
-                } else {
-                    failed++;
-                }
-            }
-        }
-        
-        if (success + failed > 1) {
-            printf("\n总计: %d 成功, %d 失败\n", success, failed);
-        }
-        
-        return (failed > 0) ? 1 : 0;
+        return batch_vm_operation(argc, argv, vm_restart, "重启");
     }
     
     // suspend 命令
     if (strcmp(command, "suspend") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s suspend VMID\n", PROGRAM_NAME);
+            fprintf(stderr, "用法: %s suspend VMID [VMID...] [RANGE...]\n", PROGRAM_NAME);
+            fprintf(stderr, "示例: %s suspend 111 112 113-115 120,121,122\n", PROGRAM_NAME);
             return 1;
         }
         
-        int vmid = atoi(argv[1]);
-        if (vmid <= 0) {
-            fprintf(stderr, "错误：无效的 VMID: %s\n", argv[1]);
-            return 1;
-        }
-        
-        return vm_suspend(vmid);
+        return batch_vm_operation(argc, argv, vm_suspend, "暂停");
     }
     
     // resume 命令
     if (strcmp(command, "resume") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s resume VMID\n", PROGRAM_NAME);
+            fprintf(stderr, "用法: %s resume VMID [VMID...] [RANGE...]\n", PROGRAM_NAME);
+            fprintf(stderr, "示例: %s resume 111 112 113-115 120,121,122\n", PROGRAM_NAME);
             return 1;
         }
         
-        int vmid = atoi(argv[1]);
-        if (vmid <= 0) {
-            fprintf(stderr, "错误：无效的 VMID: %s\n", argv[1]);
-        }
-        
-        return vm_resume(vmid);
+        return batch_vm_operation(argc, argv, vm_resume, "恢复");
     }
     
     // destroy 命令
