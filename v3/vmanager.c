@@ -1014,7 +1014,7 @@ int status_vm_remote(Config *config, int vmid) {
 // 辅助函数：从 JSON 中提取字符串值
 static char* extract_json_string(const char *json, const char *key, char *buffer, size_t buf_size) {
     char search_key[128];
-    snprintf(search_key, sizeof(search_key), "\"%s\"", key);
+    snprintf(search_key, sizeof(search_key), "\"%s\":", key);
     
     char *key_ptr = strstr(json, search_key);
     if (key_ptr) {
