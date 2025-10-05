@@ -1240,12 +1240,15 @@ int list_vms_remote(Config *config, int verbose) {
                         fprintf(stderr, COLOR_CYAN "调试: VM %d bootdisk key = %s\n" COLOR_RESET, vmid, bootdisk_key);
                     }
                     
-                    // 获取 bootdisk 大小
-                    char search_disk[128];
-                    snprintf(search_disk, sizeof(search_disk), "\"%s\"", bootdisk_key);
-                    char *disk_ptr = strstr(config_response, search_disk);
-                    if (disk_ptr) {
-                        char *size_ptr = strstr(disk_ptr, "size=");
+                    // 获取 bootdisk 的值（例如: "vmdata-1:vm-112-disk-0,size=2252M"）
+                    char disk_value[256] = "";
+                    if (extract_json_string(config_response, bootdisk_key, disk_value, sizeof(disk_value))) {
+                        if (debug_mode) {
+                            fprintf(stderr, COLOR_CYAN "调试: VM %d %s = %s\n" COLOR_RESET, vmid, bootdisk_key, disk_value);
+                        }
+                        
+                        // 在 disk_value 中查找 size=
+                        char *size_ptr = strstr(disk_value, "size=");
                         if (size_ptr) {
                             float size_val = 0;
                             char size_unit[8] = "";
@@ -1291,7 +1294,7 @@ int list_vms_remote(Config *config, int verbose) {
                         }
                     } else {
                         if (debug_mode) {
-                            fprintf(stderr, COLOR_YELLOW "调试: VM %d 未找到磁盘 %s\n" COLOR_RESET, vmid, bootdisk_key);
+                            fprintf(stderr, COLOR_YELLOW "调试: VM %d 未找到 %s 的值\n" COLOR_RESET, vmid, bootdisk_key);
                         }
                     }
                 } else {
