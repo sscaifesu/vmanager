@@ -1033,7 +1033,22 @@ int list_vms_remote(Config *config, int verbose) {
                         if (size_ptr) {
                             float size_val = 0;
                             char size_unit[8] = "";
-                            if (sscanf(size_ptr, "size=%f%7s", &size_val, size_unit) >= 1) {
+                            // 先读取数字
+                            if (sscanf(size_ptr, "size=%f", &size_val) == 1) {
+                                // 手动提取单位（只读取字母）
+                                char *unit_ptr = size_ptr + 5; // 跳过 "size="
+                                while (*unit_ptr && isdigit(*unit_ptr)) unit_ptr++; // 跳过数字
+                                if (*unit_ptr == '.') {
+                                    unit_ptr++; // 跳过小数点
+                                    while (*unit_ptr && isdigit(*unit_ptr)) unit_ptr++; // 跳过小数部分
+                                }
+                                // 现在 unit_ptr 指向单位字母
+                                int i = 0;
+                                while (*unit_ptr && isalpha(*unit_ptr) && i < 7) {
+                                    size_unit[i++] = *unit_ptr++;
+                                }
+                                size_unit[i] = '\0';
+                                
                                 if (debug_mode) {
                                     fprintf(stderr, COLOR_CYAN "调试: VM %d size = %.2f%s\n" COLOR_RESET, vmid, size_val, size_unit);
                                 }
