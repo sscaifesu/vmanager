@@ -28,7 +28,7 @@ static void print_help(void) {
     printf("用法： %s [OPTIONS] COMMAND [ARGS...]\n\n", PROGRAM_NAME);
     printf("选项：\n");
     printf("  --cli              使用 CLI 模式 (默认)\n");
-    printf("  --tui              使用 TUI 模式 (开发中)\n");
+    printf("  --tui              使用 TUI 模式 (交互式界面)\n");
     printf("  --config FILE      指定配置文件\n");
     printf("  --mode MODE        强制模式 (local/remote)\n");
     printf("  -v, --verbose      详细输出\n");
@@ -134,8 +134,7 @@ int main(int argc, char *argv[]) {
     
     // 选择 UI 模式
     if (g_ui_mode == UI_TUI) {
-        printf("TUI 模式开发中，请使用 CLI 模式\n");
-        ret = 1;
+        ret = tui_main();
     } else {
         ret = cli_main(argc - optind, argv + optind);
     }
