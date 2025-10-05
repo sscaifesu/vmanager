@@ -8,13 +8,14 @@
 // 全局变量
 Config g_config = {0};
 ExecutionMode g_exec_mode = MODE_AUTO;
-UIMode g_ui_mode = UI_CLI;  // 默认 CLI，TUI 待实现
+UIMode g_ui_mode = UI_CLI;
+bool g_verbose = false;
 bool g_debug = false;
+bool g_tui_mode = false;
 
 static void print_version(void) {
     printf("%s version %s\n\n", PROGRAM_NAME, VERSION);
     printf("Proxmox 虚拟机管理工具\n");
-    printf("作者：YXWA Infosec Lab (Crystal & evalEvil)\n");
     printf("许可：GNU General Public License v3.0\n");
     printf("项目：https://github.com/sscaifesu/vmanager\n\n");
     printf("特性：\n");
@@ -134,6 +135,7 @@ int main(int argc, char *argv[]) {
     
     // 选择 UI 模式
     if (g_ui_mode == UI_TUI) {
+        g_tui_mode = true;  // 设置 TUI 模式标志
         ret = tui_main();
     } else {
         ret = cli_main(argc - optind, argv + optind);

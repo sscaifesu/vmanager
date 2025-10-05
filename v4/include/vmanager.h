@@ -78,8 +78,9 @@ typedef enum {
 // 全局配置
 extern Config g_config;
 extern ExecutionMode g_exec_mode;
-extern UIMode g_ui_mode;
+extern bool g_verbose;
 extern bool g_debug;
+extern bool g_tui_mode;
 
 // core/api.c
 int api_init(Config *config);

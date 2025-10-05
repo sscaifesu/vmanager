@@ -122,78 +122,108 @@ int vm_status(int vmid) {
 
 // 启动 VM
 int vm_start(int vmid) {
-    printf("正在启动 VM %d...\n", vmid);
+    if (!g_tui_mode) {
+        printf("正在启动 VM %d...\n", vmid);
+    }
     
     int ret = api_vm_action(vmid, "start");
     if (ret != 0) {
-        fprintf(stderr, "错误：无法启动 VM %d\n", vmid);
+        if (!g_tui_mode) {
+            fprintf(stderr, "错误：无法启动 VM %d\n", vmid);
+        }
         return -1;
     }
     
-    printf("\033[32m✓\033[0m VM %d 启动成功\n", vmid);
+    if (!g_tui_mode) {
+        printf("\033[32m✓\033[0m VM %d 启动成功\n", vmid);
+    }
     return 0;
 }
 
 // 停止 VM
 int vm_stop(int vmid) {
-    printf("正在停止 VM %d...\n", vmid);
+    if (!g_tui_mode) {
+        printf("正在停止 VM %d...\n", vmid);
+    }
     
     int ret = api_vm_action(vmid, "stop");
     if (ret != 0) {
-        fprintf(stderr, "错误：无法停止 VM %d\n", vmid);
+        if (!g_tui_mode) {
+            fprintf(stderr, "错误：无法停止 VM %d\n", vmid);
+        }
         return -1;
     }
     
-    printf("\033[32m✓\033[0m VM %d 停止成功\n", vmid);
+    if (!g_tui_mode) {
+        printf("\033[32m✓\033[0m VM %d 停止成功\n", vmid);
+    }
     return 0;
 }
 
 // 重启 VM
 int vm_restart(int vmid) {
-    printf("正在重启 VM %d...\n", vmid);
+    if (!g_tui_mode) {
+        printf("正在重启 VM %d...\n", vmid);
+    }
     
     // Proxmox API 使用 "reboot" 而不是 "restart"
     int ret = api_vm_action(vmid, "reboot");
     if (ret != 0) {
-        fprintf(stderr, "错误：无法重启 VM %d\n", vmid);
+        if (!g_tui_mode) {
+            fprintf(stderr, "错误：无法重启 VM %d\n", vmid);
+        }
         return -1;
     }
     
-    printf("\033[32m✓\033[0m VM %d 重启成功\n", vmid);
+    if (!g_tui_mode) {
+        printf("\033[32m✓\033[0m VM %d 重启成功\n", vmid);
+    }
     return 0;
 }
 
 // 暂停 VM
 int vm_suspend(int vmid) {
-    printf("正在暂停 VM %d...\n", vmid);
+    if (!g_tui_mode) {
+        printf("正在暂停 VM %d...\n", vmid);
+    }
     
     int ret = api_vm_action(vmid, "suspend");
     if (ret != 0) {
-        fprintf(stderr, "错误：无法暂停 VM %d\n", vmid);
+        if (!g_tui_mode) {
+            fprintf(stderr, "错误：无法暂停 VM %d\n", vmid);
+        }
         return -1;
     }
     
-    printf("\033[32m✓\033[0m VM %d 暂停成功\n", vmid);
+    if (!g_tui_mode) {
+        printf("\033[32m✓\033[0m VM %d 暂停成功\n", vmid);
+    }
     return 0;
 }
 
 // 恢复 VM
 int vm_resume(int vmid) {
-    printf("正在恢复 VM %d...\n", vmid);
+    if (!g_tui_mode) {
+        printf("正在恢复 VM %d...\n", vmid);
+    }
     
     int ret = api_vm_action(vmid, "resume");
     if (ret != 0) {
-        fprintf(stderr, "错误：无法恢复 VM %d\n", vmid);
+        if (!g_tui_mode) {
+            fprintf(stderr, "错误：无法恢复 VM %d\n", vmid);
+        }
         return -1;
     }
     
-    printf("\033[32m✓\033[0m VM %d 恢复成功\n", vmid);
+    if (!g_tui_mode) {
+        printf("\033[32m✓\033[0m VM %d 恢复成功\n", vmid);
+    }
     return 0;
 }
 
 // 销毁 VM
 int vm_destroy(int vmid, bool force) {
-    if (!force) {
+    if (!force && !g_tui_mode) {
         printf("\033[33m警告：此操作将永久删除 VM %d！\033[0m\n", vmid);
         printf("确认继续？(y/n): ");
         
@@ -209,15 +239,21 @@ int vm_destroy(int vmid, bool force) {
         }
     }
     
-    printf("正在销毁 VM %d...\n", vmid);
+    if (!g_tui_mode) {
+        printf("正在销毁 VM %d...\n", vmid);
+    }
     
     int ret = api_vm_action(vmid, "destroy");
     if (ret != 0) {
-        fprintf(stderr, "错误：无法销毁 VM %d\n", vmid);
+        if (!g_tui_mode) {
+            fprintf(stderr, "错误：无法销毁 VM %d\n", vmid);
+        }
         return -1;
     }
     
-    printf("\033[32m✓\033[0m VM %d 已销毁\n", vmid);
+    if (!g_tui_mode) {
+        printf("\033[32m✓\033[0m VM %d 已销毁\n", vmid);
+    }
     return 0;
 }
 
