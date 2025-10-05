@@ -1,4 +1,4 @@
-# Makefile for vmanager v4.0.0
+# Makefile for vmanager v4.0.1
 # 遵循 GNU Make 标准
 
 # 编译器和标志
@@ -85,7 +85,7 @@ check-deps:
 # 帮助
 .PHONY: help
 help:
-	@echo "vmanager v4.0.0 Makefile"
+	@echo "vmanager v4.0.1 Makefile"
 	@echo ""
 	@echo "Targets:"
 	@echo "  all         - Build the program (default)"

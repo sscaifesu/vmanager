@@ -6,6 +6,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "../../include/vmanager.h"
 #include <strings.h>
+#include <unistd.h>
 
 // 列出所有 VM
 int vm_list(bool verbose) {
@@ -122,14 +123,10 @@ int vm_status(int vmid) {
 
 // 启动 VM
 int vm_start(int vmid) {
-    if (!g_tui_mode) {
-        printf("正在启动 VM %d...\n", vmid);
-    }
-    
     int ret = api_vm_action(vmid, "start");
     if (ret != 0) {
         if (!g_tui_mode) {
-            fprintf(stderr, "错误：无法启动 VM %d\n", vmid);
+            fprintf(stderr, "\033[31m✗\033[0m VM %d 启动失败\n", vmid);
         }
         return -1;
     }
@@ -142,14 +139,10 @@ int vm_start(int vmid) {
 
 // 停止 VM
 int vm_stop(int vmid) {
-    if (!g_tui_mode) {
-        printf("正在停止 VM %d...\n", vmid);
-    }
-    
     int ret = api_vm_action(vmid, "stop");
     if (ret != 0) {
         if (!g_tui_mode) {
-            fprintf(stderr, "错误：无法停止 VM %d\n", vmid);
+            fprintf(stderr, "\033[31m✗\033[0m VM %d 停止失败\n", vmid);
         }
         return -1;
     }
@@ -162,15 +155,11 @@ int vm_stop(int vmid) {
 
 // 重启 VM
 int vm_restart(int vmid) {
-    if (!g_tui_mode) {
-        printf("正在重启 VM %d...\n", vmid);
-    }
-    
     // Proxmox API 使用 "reboot" 而不是 "restart"
     int ret = api_vm_action(vmid, "reboot");
     if (ret != 0) {
         if (!g_tui_mode) {
-            fprintf(stderr, "错误：无法重启 VM %d\n", vmid);
+            fprintf(stderr, "\033[31m✗\033[0m VM %d 重启失败\n", vmid);
         }
         return -1;
     }
@@ -183,14 +172,10 @@ int vm_restart(int vmid) {
 
 // 暂停 VM
 int vm_suspend(int vmid) {
-    if (!g_tui_mode) {
-        printf("正在暂停 VM %d...\n", vmid);
-    }
-    
     int ret = api_vm_action(vmid, "suspend");
     if (ret != 0) {
         if (!g_tui_mode) {
-            fprintf(stderr, "错误：无法暂停 VM %d\n", vmid);
+            fprintf(stderr, "\033[31m✗\033[0m VM %d 暂停失败\n", vmid);
         }
         return -1;
     }
@@ -203,14 +188,10 @@ int vm_suspend(int vmid) {
 
 // 恢复 VM
 int vm_resume(int vmid) {
-    if (!g_tui_mode) {
-        printf("正在恢复 VM %d...\n", vmid);
-    }
-    
     int ret = api_vm_action(vmid, "resume");
     if (ret != 0) {
         if (!g_tui_mode) {
-            fprintf(stderr, "错误：无法恢复 VM %d\n", vmid);
+            fprintf(stderr, "\033[31m✗\033[0m VM %d 恢复失败\n", vmid);
         }
         return -1;
     }
@@ -240,19 +221,27 @@ int vm_destroy(int vmid, bool force) {
     }
     
     if (!g_tui_mode) {
-        printf("正在销毁 VM %d...\n", vmid);
+        printf("正在提交销毁任务 VM %d...\n", vmid);
     }
     
+    // 先尝试停止 VM（如果正在运行）
+    // 忽略停止失败的情况，因为 VM 可能已经停止
+    api_vm_action(vmid, "stop");
+    
+    // 等待一小段时间让 VM 停止
+    sleep(2);
+    
+    // 执行销毁操作
     int ret = api_vm_action(vmid, "destroy");
     if (ret != 0) {
         if (!g_tui_mode) {
-            fprintf(stderr, "错误：无法销毁 VM %d\n", vmid);
+            fprintf(stderr, "\033[31m✗\033[0m VM %d 销毁任务提交失败\n", vmid);
         }
         return -1;
     }
     
     if (!g_tui_mode) {
-        printf("\033[32m✓\033[0m VM %d 已销毁\n", vmid);
+        printf("\033[32m✓\033[0m VM %d 销毁任务已提交（异步执行中）\n", vmid);
     }
     return 0;
 }

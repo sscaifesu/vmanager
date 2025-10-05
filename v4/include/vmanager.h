@@ -1,5 +1,5 @@
 /*
- * vmanager v4.0.0 - 主头文件
+ * vmanager v4.0.1 - 主头文件
  */
 
 #ifndef VMANAGER_H
@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include "../cJSON.h"
 
-#define VERSION "4.0.0"
+#define VERSION "4.0.1"
 #define PROGRAM_NAME "vmanager"
 #define MAX_VMIDS 100
 

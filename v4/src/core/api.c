@@ -446,17 +446,51 @@ int api_vm_action(int vmid, const char *action) {
     CURLcode res = curl_easy_perform(curl_handle);
     
     int ret = -1;
+    long http_code = 0;
+    curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
+    
     if (res != CURLE_OK) {
         if (g_debug) {
             fprintf(stderr, "curl_easy_perform() 失败: %s\n", curl_easy_strerror(res));
         }
     } else {
-        cJSON *json = cJSON_Parse(chunk.memory);
-        if (json) {
-            ret = 0;
-            cJSON_Delete(json);
-        } else if (g_debug) {
-            fprintf(stderr, "JSON 解析失败: %s\n", chunk.memory);
+        if (g_debug) {
+            fprintf(stderr, "HTTP %s %ld: %s\n", is_destroy ? "DELETE" : "POST", http_code, endpoint);
+            fprintf(stderr, "响应: %s\n", chunk.memory);
+        }
+        
+        // 检查 HTTP 状态码
+        if (http_code >= 200 && http_code < 300) {
+            cJSON *json = cJSON_Parse(chunk.memory);
+            if (json) {
+                // 检查是否有错误信息
+                cJSON *errors = cJSON_GetObjectItem(json, "errors");
+                if (errors && cJSON_IsObject(errors)) {
+                    if (!g_tui_mode) {
+                        fprintf(stderr, "API 返回错误\n");
+                    }
+                    ret = -1;
+                } else {
+                    // 对于异步操作（如 destroy），API 返回任务 ID
+                    cJSON *data = cJSON_GetObjectItem(json, "data");
+                    if (data) {
+                        const char *upid = cJSON_GetStringValue(data);
+                        if (upid && g_debug) {
+                            fprintf(stderr, "任务 ID: %s\n", upid);
+                        }
+                    }
+                    ret = 0;
+                }
+                cJSON_Delete(json);
+            } else {
+                if (g_debug) {
+                    fprintf(stderr, "JSON 解析失败: %s\n", chunk.memory);
+                }
+            }
+        } else {
+            if (!g_tui_mode) {
+                fprintf(stderr, "HTTP 错误: %ld\n", http_code);
+            }
         }
     }
     

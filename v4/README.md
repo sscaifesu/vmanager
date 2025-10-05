@@ -1,4 +1,4 @@
-# vmanager v4.0.0
+# vmanager v4.0.1
 
 Proxmox 虚拟机管理工具 - 专业、高效、易用
 
@@ -8,14 +8,14 @@ Proxmox 虚拟机管理工具 - 专业、高效、易用
 
 **Linux**
 ```bash
-wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-linux-amd64
+wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.1/vmanager-linux-amd64
 chmod +x vmanager-linux-amd64
 sudo mv vmanager-linux-amd64 /usr/local/bin/vmanager
 ```
 
 **macOS**
 ```bash
-wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-macos-amd64
+wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.1/vmanager-macos-amd64
 xattr -d com.apple.quarantine vmanager-macos-amd64  # 移除隔离属性
 chmod +x vmanager-macos-amd64
 sudo mv vmanager-macos-amd64 /usr/local/bin/vmanager
@@ -54,7 +54,7 @@ pveum user token add root@pam vmanager --privsep 0
 
 ## 当前状态
 
-### ✅ 已完成（v4.0.0）
+### ✅ 已完成（v4.0.1）
 
 **核心架构**
 - ✅ 模块化架构设计（14 个源文件）
@@ -194,6 +194,7 @@ make
 - [x] 错误处理
 - [x] 文档完善
 - [x] v4.0.0 发布 ✅
+- [x] v4.0.1 发布 ✅ (修复 destroy 操作，优化所有操作输出)
 
 ### Phase 2: TUI 界面 🚧 进行中
 - [x] ncurses 框架搭建

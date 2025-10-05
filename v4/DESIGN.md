@@ -1,4 +1,4 @@
-# vmanager v4.0.0 设计文档
+# vmanager v4.0.1 设计文档
 
 ## 核心特性
 
@@ -38,15 +38,15 @@ vmanager v4
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ vmanager v4.0.0 - Proxmox VM Manager          [F1] Help [Q] Quit│
+│ vmanager v4.0.1 - Proxmox VM Manager          [F1] Help [Q] Quit│
 ├─────────────────────────────────────────────────────────────────┤
 │ VMID  Name              Status    CPU%  Mem(GB)  Disk(GB)  IP   │
 ├─────────────────────────────────────────────────────────────────┤
-│ 111   srv-web-25c201    running   2.1   4.0      2.2       10..│
-│ 112   srv-web-25c202    running   1.8   4.0      2.2       10..│
-│                                                                  │
+│ 111   srv-web-25c201    running   2.1   4.0      2.2       10.. │
+│ 112   srv-web-25c202    running   1.8   4.0      2.2       10.. │
+│                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│ [S]tart [T]op [R]estart [P]ause [D]estroy [Enter]Details       │
+│ [S]tart [T]op [R]estart [P]ause [D]estroy [Enter]Details        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

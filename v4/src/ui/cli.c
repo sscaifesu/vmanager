@@ -4,6 +4,7 @@
  */
 
 #include "../../include/vmanager.h"
+#include <strings.h>
 
 // 批量执行 VM 操作的辅助函数
 static int batch_vm_operation(int argc, char *argv[], int (*operation)(int), const char *op_name) {
@@ -165,25 +166,100 @@ int cli_main(int argc, char *argv[]) {
         return batch_vm_operation(argc, argv, vm_resume, "恢复");
     }
     
-    // destroy 命令
+    // destroy 命令 - 支持批量操作
     if (strcmp(command, "destroy") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s destroy VMID [-f|--force]\n", PROGRAM_NAME);
+            fprintf(stderr, "用法: %s destroy VMID... [-f|--force]\n", PROGRAM_NAME);
             return 1;
         }
         
-        int vmid = atoi(argv[1]);
-        if (vmid <= 0) {
-            fprintf(stderr, "错误：无效的 VMID: %s\n", argv[1]);
-            return 1;
-        }
-        
+        // 检查是否有 force 标志
         bool force = false;
-        if (argc > 2 && (strcmp(argv[2], "-f") == 0 || strcmp(argv[2], "--force") == 0)) {
+        int vmid_count = argc - 1;
+        if (argc > 2 && (strcmp(argv[argc-1], "-f") == 0 || strcmp(argv[argc-1], "--force") == 0)) {
             force = true;
+            vmid_count--;
         }
         
-        return vm_destroy(vmid, force);
+        // 解析所有 VMID
+        int vmids[MAX_VMIDS];
+        int total_count = 0;
+        
+        for (int i = 1; i <= vmid_count; i++) {
+            // 检查是否包含范围或逗号分隔
+            if (strchr(argv[i], '-') && !is_number(argv[i])) {
+                // 范围格式: 111-115
+                int temp_vmids[MAX_VMIDS];
+                int count = 0;
+                if (parse_vmid_range(argv[i], temp_vmids, &count) == 0) {
+                    for (int j = 0; j < count; j++) {
+                        vmids[total_count++] = temp_vmids[j];
+                    }
+                } else {
+                    fprintf(stderr, "错误：无效的范围格式: %s\n", argv[i]);
+                    return 1;
+                }
+            } else if (strchr(argv[i], ',')) {
+                // 逗号分隔: 111,112,113
+                int temp_vmids[MAX_VMIDS];
+                int count = 0;
+                if (parse_vmid_range(argv[i], temp_vmids, &count) == 0) {
+                    for (int j = 0; j < count; j++) {
+                        vmids[total_count++] = temp_vmids[j];
+                    }
+                } else {
+                    fprintf(stderr, "错误：无效的列表格式: %s\n", argv[i]);
+                    return 1;
+                }
+            } else {
+                // 单个 VMID
+                int vmid = atoi(argv[i]);
+                if (vmid > 0) {
+                    vmids[total_count++] = vmid;
+                } else {
+                    fprintf(stderr, "错误：无效的 VMID: %s\n", argv[i]);
+                    return 1;
+                }
+            }
+        }
+        
+        if (total_count == 0) {
+            fprintf(stderr, "错误：未指定有效的 VMID\n");
+            return 1;
+        }
+        
+        // 批量确认
+        if (!force) {
+            printf("\033[33m警告：此操作将永久删除 %d 个 VM！\033[0m\n", total_count);
+            printf("VMID 列表：");
+            for (int i = 0; i < total_count; i++) {
+                printf("%d%s", vmids[i], (i < total_count - 1) ? ", " : "\n");
+            }
+            printf("确认继续？(y/n): ");
+            
+            char confirm[10];
+            if (fgets(confirm, sizeof(confirm), stdin)) {
+                confirm[strcspn(confirm, "\n")] = '\0';
+                if (strcasecmp(confirm, "y") != 0 && strcasecmp(confirm, "yes") != 0) {
+                    printf("操作已取消\n");
+                    return 0;
+                }
+            }
+        }
+        
+        // 执行批量删除
+        int success = 0, failed = 0;
+        for (int i = 0; i < total_count; i++) {
+            // vm_destroy 内部会打印消息，所以这里不需要重复打印
+            if (vm_destroy(vmids[i], true) == 0) {  // force=true 跳过单个确认
+                success++;
+            } else {
+                failed++;
+            }
+        }
+        
+        printf("\n销毁 总计: %d 成功, %d 失败\n", success, failed);
+        return (failed > 0) ? 1 : 0;
     }
     
     // clone 命令

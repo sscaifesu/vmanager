@@ -1,6 +1,6 @@
 /*
  * vmanager - Proxmox 虚拟机管理工具
- * 版本：4.0.0
+ * 版本：4.0.1
  * 作者：YXWA Infosec Lab (Crystal & evalEvil)
  * 许可：GNU General Public License v3.0
  * 项目：https://github.com/sscaifesu/vmanager
@@ -28,7 +28,7 @@
 #include "cJSON.h"
 #include "cJSON.h"
 
-#define VERSION "4.0.0"
+#define VERSION "4.0.1"
 #define PROGRAM_NAME "vmanager"
 #define MAX_COMMAND 2048
 #define MAX_VMIDS 100
