@@ -174,14 +174,62 @@ int api_get_vm_status(int vmid, VMInfo *vm) {
 int api_vm_action(int vmid, const char *action) {
     if (!action) return -1;
     
+    char command[2048];
     char endpoint[256];
-    snprintf(endpoint, sizeof(endpoint), "/api2/json/nodes/%s/qemu/%d/status/%s",
-             api_config->node, vmid, action);
     
-    cJSON *response = api_post(endpoint, NULL);
-    if (!response) return -1;
+    // destroy 操作需要使用 DELETE 方法
+    if (strcmp(action, "destroy") == 0) {
+        snprintf(endpoint, sizeof(endpoint), "/api2/json/nodes/%s/qemu/%d",
+                 api_config->node, vmid);
+        snprintf(command, sizeof(command),
+                "curl -s -k -X DELETE 'https://%s:%d%s' "
+                "-H 'Authorization: PVEAPIToken=%s=%s'",
+                api_config->host, api_config->port, endpoint,
+                api_config->token_id, api_config->token_secret);
+    } else {
+        // 其他操作使用 POST 到 status/<action>
+        snprintf(endpoint, sizeof(endpoint), "/api2/json/nodes/%s/qemu/%d/status/%s",
+                 api_config->node, vmid, action);
+        snprintf(command, sizeof(command),
+                "curl -s -k -X POST 'https://%s:%d%s' "
+                "-H 'Authorization: PVEAPIToken=%s=%s'",
+                api_config->host, api_config->port, endpoint,
+                api_config->token_id, api_config->token_secret);
+    }
     
-    cJSON_Delete(response);
+    if (g_debug) {
+        fprintf(stderr, "API %s: %s\n", 
+                strcmp(action, "destroy") == 0 ? "DELETE" : "POST", endpoint);
+    }
+    
+    FILE *fp = popen(command, "r");
+    if (!fp) return -1;
+    
+    char *response = malloc(65536);
+    if (!response) {
+        pclose(fp);
+        return -1;
+    }
+    
+    size_t total = 0;
+    char line[4096];
+    response[0] = '\0';
+    
+    while (fgets(line, sizeof(line), fp) && total < 65535) {
+        size_t len = strlen(line);
+        if (total + len < 65535) {
+            strcat(response, line);
+            total += len;
+        }
+    }
+    pclose(fp);
+    
+    cJSON *json = cJSON_Parse(response);
+    free(response);
+    
+    if (!json) return -1;
+    
+    cJSON_Delete(json);
     return 0;
 }
 
