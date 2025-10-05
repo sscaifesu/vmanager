@@ -59,6 +59,7 @@ cJSON* api_get(const char *endpoint) {
 }
 
 cJSON* api_post(const char *endpoint, cJSON *data) {
+    (void)data;  // 未使用的参数，保留用于未来扩展
     if (!api_config || !endpoint) return NULL;
     
     char command[2048];
