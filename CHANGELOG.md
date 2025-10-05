@@ -122,17 +122,32 @@ vmanager clone 111 112 --name new-vm
 vmanager destroy 111
 ```
 
+**TUI 界面**
+- 完整的 ncurses 交互界面
+- 实时刷新（30 秒自动更新）
+- 键盘导航（上下、翻页、Home/End）
+- VM 操作（启动、停止、重启、删除）
+- 彩色显示和选中高亮
+- 确认对话框和消息提示
+
+**批量操作**
+- 支持单个 VMID：111
+- 支持多个 VMID：111 112 113
+- 支持范围：111-115
+- 支持逗号分隔：111,112,113
+- 支持混合：111 112 113-115 120,121,122
+- 所有命令支持批量（start, stop, reboot, suspend, resume）
+
+**版权信息**
+- 添加版权声明
+- 作者署名（Crystal & evalEvil）
+- YXWA Infosec Lab
+
 ### 📋 已知问题
 
-- TUI 界面尚未完成（框架已搭建）
 - IP 地址需要 qemu-guest-agent 支持
 
 ### 🔮 下一步计划
-
-**Phase 2: TUI 界面**
-- ncurses 交互界面
-- 实时刷新
-- 键盘导航
 
 **Phase 3: 高级功能**
 - 快照管理

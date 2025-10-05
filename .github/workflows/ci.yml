@@ -1,0 +1,50 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libncurses5-dev valgrind
+          
+      - name: Build vmanager
+        working-directory: v4
+        run: |
+          make clean
+          make
+          
+      - name: Check for warnings
+        working-directory: v4
+        run: |
+          make clean
+          make 2>&1 | tee build.log
+          if grep -i "warning:" build.log; then
+            echo "Build contains warnings"
+            exit 1
+          fi
+          
+      - name: Run basic tests
+        working-directory: v4
+        run: |
+          ./vmanager --version
+          ./vmanager --help
+          
+      - name: Check memory leaks (if tests available)
+        working-directory: v4
+        run: |
+          if [ -f test_verbose ]; then
+            valgrind --leak-check=full --error-exitcode=1 ./test_verbose
+          fi
