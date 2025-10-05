@@ -886,8 +886,19 @@ int status_vm_remote(Config *config, int vmid) {
         char memory[16] = "N/A";
         
         extract_json_string(config_response, "bootdisk", bootdisk, sizeof(bootdisk));
-        extract_json_string(config_response, "cores", cores, sizeof(cores));
         extract_json_string(config_response, "memory", memory, sizeof(memory));
+        
+        // cores 是数字类型，需要特殊处理
+        char *cores_ptr = strstr(config_response, "\"cores\"");
+        if (cores_ptr) {
+            char *colon = strchr(cores_ptr, ':');
+            if (colon) {
+                int cores_val = 0;
+                if (sscanf(colon + 1, "%d", &cores_val) == 1) {
+                    snprintf(cores, sizeof(cores), "%d", cores_val);
+                }
+            }
+        }
         
         printf("  bootdisk: %s\n", bootdisk);
         printf("  cores: %s\n", cores);
@@ -921,31 +932,38 @@ int status_vm_remote(Config *config, int vmid) {
             char *scsi_ptr = strstr(ptr, "\"scsi");
             char *ide_ptr = strstr(ptr, "\"ide");
             char *sata_ptr = strstr(ptr, "\"sata");
+            char *virtio_ptr = strstr(ptr, "\"virtio");
             
             // 找到最近的一个
             ptr = NULL;
             if (scsi_ptr != NULL) ptr = scsi_ptr;
             if (ide_ptr != NULL && (ptr == NULL || ide_ptr < ptr)) ptr = ide_ptr;
             if (sata_ptr != NULL && (ptr == NULL || sata_ptr < ptr)) ptr = sata_ptr;
+            if (virtio_ptr != NULL && (ptr == NULL || virtio_ptr < ptr)) ptr = virtio_ptr;
             
             if (ptr == NULL) break;
-            char *colon = strchr(ptr, ':');
-            if (colon) {
-                char *key_start = ptr + 1;
-                char *key_end = strchr(key_start, '"');
-                if (key_end && key_end < colon) {
-                    colon++;
-                    while (*colon == ' ' || *colon == '\t') colon++;
-                    if (*colon == '"') {
-                        char *quote1 = colon;
-                        char *quote2 = strchr(quote1 + 1, '"');
-                        if (quote2) {
-                            printf("  ");
-                            fwrite(key_start, 1, key_end - key_start, stdout);
-                            printf(": ");
-                            fwrite(quote1 + 1, 1, quote2 - quote1 - 1, stdout);
-                            printf("\n");
-                            disk_count++;
+            
+            // 检查是否是存储设备（后面必须跟数字）
+            char *key_start = ptr + 1;
+            char *key_end = strchr(key_start, '"');
+            if (key_end) {
+                // 检查最后一个字符是否是数字
+                if (key_end > key_start && isdigit(*(key_end - 1))) {
+                    char *colon = strchr(key_end, ':');
+                    if (colon) {
+                        colon++;
+                        while (*colon == ' ' || *colon == '\t') colon++;
+                        if (*colon == '"') {
+                            char *quote1 = colon;
+                            char *quote2 = strchr(quote1 + 1, '"');
+                            if (quote2) {
+                                printf("  ");
+                                fwrite(key_start, 1, key_end - key_start, stdout);
+                                printf(": ");
+                                fwrite(quote1 + 1, 1, quote2 - quote1 - 1, stdout);
+                                printf("\n");
+                                disk_count++;
+                            }
                         }
                     }
                 }
