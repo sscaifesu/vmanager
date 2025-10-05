@@ -1018,8 +1018,12 @@ int list_vms_remote(Config *config, int verbose) {
                 }
                 
                 // 提取 bootdisk
-                char bootdisk_key[32];
+                char bootdisk_key[32] = "";
                 if (extract_json_string(config_response, "bootdisk", bootdisk_key, sizeof(bootdisk_key))) {
+                    if (debug_mode) {
+                        fprintf(stderr, COLOR_CYAN "调试: VM %d bootdisk key = %s\n" COLOR_RESET, vmid, bootdisk_key);
+                    }
+                    
                     // 获取 bootdisk 大小
                     char search_disk[128];
                     snprintf(search_disk, sizeof(search_disk), "\"%s\"", bootdisk_key);
@@ -1030,15 +1034,38 @@ int list_vms_remote(Config *config, int verbose) {
                             float size_val = 0;
                             char size_unit[8] = "";
                             if (sscanf(size_ptr, "size=%f%7s", &size_val, size_unit) >= 1) {
+                                if (debug_mode) {
+                                    fprintf(stderr, COLOR_CYAN "调试: VM %d size = %.2f%s\n" COLOR_RESET, vmid, size_val, size_unit);
+                                }
                                 if (strcasecmp(size_unit, "G") == 0 || strcasecmp(size_unit, "GB") == 0) {
                                     snprintf(bootdisk, sizeof(bootdisk), "%.2f", size_val);
                                 } else if (strcasecmp(size_unit, "M") == 0 || strcasecmp(size_unit, "MB") == 0) {
                                     snprintf(bootdisk, sizeof(bootdisk), "%.2f", size_val / 1024.0);
                                 } else if (strcasecmp(size_unit, "T") == 0 || strcasecmp(size_unit, "TB") == 0) {
                                     snprintf(bootdisk, sizeof(bootdisk), "%.2f", size_val * 1024.0);
+                                } else {
+                                    if (debug_mode) {
+                                        fprintf(stderr, COLOR_YELLOW "调试: VM %d 未知单位 '%s'\n" COLOR_RESET, vmid, size_unit);
+                                    }
+                                }
+                            } else {
+                                if (debug_mode) {
+                                    fprintf(stderr, COLOR_YELLOW "调试: VM %d sscanf 失败\n" COLOR_RESET, vmid);
                                 }
                             }
+                        } else {
+                            if (debug_mode) {
+                                fprintf(stderr, COLOR_YELLOW "调试: VM %d 未找到 size=\n" COLOR_RESET, vmid);
+                            }
                         }
+                    } else {
+                        if (debug_mode) {
+                            fprintf(stderr, COLOR_YELLOW "调试: VM %d 未找到磁盘 %s\n" COLOR_RESET, vmid, bootdisk_key);
+                        }
+                    }
+                } else {
+                    if (debug_mode) {
+                        fprintf(stderr, COLOR_YELLOW "调试: VM %d 未找到 bootdisk 字段\n" COLOR_RESET, vmid);
                     }
                 }
                 
