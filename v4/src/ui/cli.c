@@ -116,10 +116,10 @@ int cli_main(int argc, char *argv[]) {
         return (failed > 0) ? 1 : 0;
     }
     
-    // restart 命令
-    if (strcmp(command, "restart") == 0) {
+    // reboot 命令（推荐）和 restart 命令（别名）
+    if (strcmp(command, "reboot") == 0 || strcmp(command, "restart") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s restart VMID [VMID...]\n", PROGRAM_NAME);
+            fprintf(stderr, "用法: %s %s VMID [VMID...]\n", PROGRAM_NAME, command);
             return 1;
         }
         
@@ -169,16 +169,15 @@ int cli_main(int argc, char *argv[]) {
         int vmid = atoi(argv[1]);
         if (vmid <= 0) {
             fprintf(stderr, "错误：无效的 VMID: %s\n", argv[1]);
-            return 1;
         }
         
         return vm_resume(vmid);
     }
     
-    // destroy 命令
-    if (strcmp(command, "destroy") == 0) {
+    // delete 命令（推荐）和 destroy 命令（别名）
+    if (strcmp(command, "delete") == 0 || strcmp(command, "destroy") == 0) {
         if (argc < 2) {
-            fprintf(stderr, "用法: %s destroy VMID [-f|--force]\n", PROGRAM_NAME);
+            fprintf(stderr, "用法: %s %s VMID [-f|--force]\n", PROGRAM_NAME, command);
             return 1;
         }
         

@@ -40,14 +40,19 @@ static void print_help(void) {
     printf("  status VMID        查看 VM 状态\n");
     printf("  start VMID         启动 VM\n");
     printf("  stop VMID          停止 VM\n");
-    printf("  restart VMID       重启 VM\n");
+    printf("  reboot VMID        重启 VM (推荐，与 PVE 一致)\n");
     printf("  suspend VMID       暂停 VM\n");
     printf("  resume VMID        恢复 VM\n");
-    printf("  destroy VMID       删除 VM\n\n");
+    printf("  delete VMID        删除 VM (推荐，与 PVE 一致)\n\n");
+    printf("别名命令（兼容性）：\n");
+    printf("  restart VMID       重启 VM (等同于 reboot)\n");
+    printf("  destroy VMID       删除 VM (等同于 delete)\n\n");
     printf("示例：\n");
     printf("  %s list\n", PROGRAM_NAME);
     printf("  %s status 111\n", PROGRAM_NAME);
     printf("  %s start 111 112\n", PROGRAM_NAME);
+    printf("  %s reboot 111\n", PROGRAM_NAME);
+    printf("  %s delete 111\n", PROGRAM_NAME);
     printf("  %s --tui\n", PROGRAM_NAME);
 }
 
