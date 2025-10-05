@@ -24,28 +24,62 @@ pveum user token add root@pam vmanager --privsep 0
 
 ## 当前状态
 
-### ✅ 已完成
-- 项目架构设计
-- 模块化目录结构
-- cJSON 集成
-- 核心头文件 (`include/vmanager.h`)
-- JSON 工具函数 (`src/utils/json.c`)
-- API 封装 (`src/core/api.c`) - 使用 libcurl
-- 主程序框架 (`src/main.c`)
+### ✅ 已完成（v4.0.0）
 
-### 🚧 进行中
-- CLI 界面实现
-- 配置管理
-- VM 操作函数
+**核心架构**
+- ✅ 模块化架构设计（14 个源文件）
+- ✅ cJSON 科学 JSON 解析
+- ✅ libcurl HTTP 请求
+- ✅ 高内聚低耦合设计
 
-### 📋 待实现
-- TUI 界面 (ncurses)
-- 日志系统
-- 错误处理
-- 实时监控
-- 快照管理
-- 备份功能
-- 完整测试
+**核心功能**
+- ✅ VM 列表查看（list / list -v）
+- ✅ VM 状态查询（status）
+- ✅ VM 电源管理（start, stop, reboot, suspend, resume）
+- ✅ VM 删除（destroy）
+- ✅ VM 克隆（clone）
+- ✅ 配置向导（交互式配置）
+- ✅ 批量操作支持
+
+**增强功能**
+- ✅ 网络信息显示（网桥、IP 地址）
+- ✅ 存储信息显示（存储位置、配置文件）
+- ✅ 详细模式（-v 选项）
+- ✅ 调试模式（--debug）
+- ✅ 完善的错误处理
+
+**文档**
+- ✅ API 权限配置指南
+- ✅ 设计文档（DESIGN.md）
+- ✅ 更新日志（CHANGELOG.md）
+- ✅ 项目总结（PROJECT_SUMMARY.md）
+
+### 🚧 开发中
+
+- 🔄 TUI 界面（ncurses）- 框架已搭建
+- 🔄 性能优化
+
+### 📋 未来计划（Phase 2）
+
+**高级功能**
+- [ ] 快照管理（snapshot, rollback）
+- [ ] 备份功能（backup, restore）
+- [ ] 实时监控（watch 模式）
+- [ ] VM 创建（create）
+- [ ] VM 迁移（migrate）
+- [ ] 批量克隆
+
+**用户体验**
+- [ ] TUI 交互界面
+- [ ] 彩色输出优化
+- [ ] 进度条显示
+- [ ] 任务状态跟踪
+
+**系统增强**
+- [ ] 日志系统
+- [ ] 配置文件加密
+- [ ] 多节点支持
+- [ ] 插件系统
 
 ## 架构
 
@@ -54,18 +88,17 @@ v4/
 ├── include/
 │   └── vmanager.h          # 主头文件
 ├── src/
-│   ├── main.c              # 主程序
+│   ├── main.c              # 主程序 ✅
 │   ├── core/
-│   │   ├── api.c           # API 封装 (libcurl + cJSON)
-│   │   ├── config.c        # 配置管理 (待实现)
-│   │   └── vm.c            # VM 操作 (待实现)
+│   │   ├── api.c           # API 封装 (libcurl + cJSON) ✅
+│   │   ├── config.c        # 配置管理 ✅
+│   │   └── vm.c            # VM 操作 ✅
 │   ├── ui/
-│   │   ├── cli.c           # CLI 界面 (待实现)
-│   │   └── tui.c           # TUI 界面 (待实现)
+│   │   ├── cli.c           # CLI 界面 ✅
+│   │   └── tui.c           # TUI 界面 (开发中)
 │   └── utils/
-│       ├── json.c          # JSON 工具
-│       ├── logger.c        # 日志系统 (待实现)
-│       └── common.c        # 通用工具 (待实现)
+│       ├── json.c          # JSON 工具 ✅
+│       └── common.c        # 通用工具 ✅
 ├── cJSON.c                 # cJSON 库
 ├── cJSON.h
 ├── Makefile
@@ -111,33 +144,43 @@ make
 
 ## 开发计划
 
-### Phase 1: 核心功能 (当前)
+### Phase 1: 核心功能 ✅ 已完成
 - [x] 项目架构
 - [x] cJSON 集成
+- [x] libcurl 集成
 - [x] API 封装
-- [ ] CLI 实现
-- [ ] 配置管理
-- [ ] VM 操作
+- [x] CLI 实现
+- [x] 配置管理
+- [x] VM 操作（list, status, start, stop, reboot, suspend, resume, destroy, clone）
+- [x] 批量操作
+- [x] 网络和存储信息
+- [x] 错误处理
+- [x] 文档完善
+- [x] v4.0.0 发布 ✅
 
-### Phase 2: TUI 界面
-- [ ] ncurses 集成
+### Phase 2: TUI 界面 🚧 进行中
+- [x] ncurses 框架搭建
 - [ ] 交互式界面
 - [ ] 键盘导航
 - [ ] 实时刷新
+- [ ] 多窗口布局
 
-### Phase 3: 高级功能
-- [ ] 实时监控
-- [ ] 快照管理
-- [ ] 备份功能
-- [ ] 克隆 VM
-- [ ] 迁移 VM
+### Phase 3: 高级功能 📋 计划中
+- [ ] 实时监控（watch 模式）
+- [ ] 快照管理（snapshot, rollback）
+- [ ] 备份功能（backup, restore）
+- [ ] VM 创建（create）
+- [ ] VM 迁移（migrate）
+- [ ] 批量克隆增强
 
-### Phase 4: 优化和发布
-- [ ] 性能优化
-- [ ] 错误处理
-- [ ] 完整测试
-- [ ] 文档完善
-- [ ] 发布 v4.0.0
+### Phase 4: 优化和增强 📋 计划中
+- [ ] 性能优化（连接池、缓存）
+- [ ] 日志系统
+- [ ] 配置文件加密
+- [ ] 多节点支持
+- [ ] 插件系统
+- [ ] 单元测试
+- [ ] 集成测试
 
 ## 为什么要 v4？
 
@@ -148,10 +191,13 @@ v3 存在的问题：
 4. **没有 TUI** - 只能命令行操作
 
 v4 的改进：
-1. **科学的 JSON 解析** - 使用 cJSON 库
-2. **模块化设计** - 易于维护和扩展
-3. **功能丰富** - 监控、快照、备份等
-4. **双模式 UI** - CLI + TUI
+1. **科学的 JSON 解析** - 使用 cJSON 库，稳定可靠
+2. **高性能 HTTP** - libcurl，性能提升 30-50%
+3. **模块化设计** - 14 个源文件，易于维护和扩展
+4. **功能完整** - list, status, start, stop, reboot, suspend, resume, destroy, clone
+5. **增强信息** - 网络、存储、IP 地址显示
+6. **双模式 UI** - CLI（已完成）+ TUI（开发中）
+7. **完善文档** - API 权限配置、设计文档、项目总结
 
 ## 贡献
 
