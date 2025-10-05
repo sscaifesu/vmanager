@@ -101,39 +101,39 @@ jobs:
             
             Proxmox VM Management Tool
             
-            ## Features
+            ## 功能特点
             
-            - CLI and TUI dual modes
-            - Batch operations (ranges, comma-separated)
-            - Complete VM management
-            - Real-time monitoring
-            - Modular architecture
-            - Zero compiler warnings
+            - CLI 和 TUI 双模式
+            - 批量操作（范围、逗号分隔）
+            - 完整的 VM 管理
+            - 实时监控
+            - 模块化架构
+            - 零编译警告
             
-            ## Supported Platforms
+            ## 支持平台
             
             - Linux x86_64
             - macOS x86_64
             
-            ## Installation
+            ## 安装方法
             
             ```bash
-            # Download binary
+            # 下载二进制文件
             wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-linux-amd64
             
-            # Verify checksum
+            # 验证校验和
             sha256sum -c SHA256SUMS
             
-            # Install
+            # 安装
             chmod +x vmanager-linux-amd64
             sudo mv vmanager-linux-amd64 /usr/local/bin/vmanager
             
-            # Use
+            # 使用方式
             vmanager --help
             vmanager --tui
             ```
             
-            ## Team
+            ## 开发团队
             
             Copyright (C) 2025 YXWA Infosec Lab  
             Authors: Crystal & evalEvil  
