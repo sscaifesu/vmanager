@@ -78,30 +78,37 @@ pveum user token add root@pam vmanager --privsep 0
 - ✅ 调试模式（--debug）
 - ✅ 完善的错误处理
 
+**TUI 界面**
+- ✅ 完整的 ncurses 交互界面
+- ✅ 实时刷新（30 秒自动更新）
+- ✅ 键盘导航（上下、翻页、Home/End）
+- ✅ VM 操作（启动、停止、重启、删除）
+- ✅ 彩色显示和选中高亮
+- ✅ 确认对话框和消息提示
+
+**批量操作**
+- ✅ 支持单个 VMID：111
+- ✅ 支持多个 VMID：111 112 113
+- ✅ 支持范围：111-115
+- ✅ 支持逗号分隔：111,112,113
+- ✅ 支持混合：111 112 113-115 120,121,122
+
 **文档**
 - ✅ API 权限配置指南
 - ✅ 设计文档（DESIGN.md）
 - ✅ 更新日志（CHANGELOG.md）
 - ✅ 项目总结（PROJECT_SUMMARY.md）
 
-### 🚧 开发中
-
-- 🔄 TUI 界面（ncurses）- 框架已搭建
-- 🔄 性能优化
-
 ### 📋 未来计划（Phase 2）
 
 **高级功能**
 - [ ] 快照管理（snapshot, rollback）
 - [ ] 备份功能（backup, restore）
-- [ ] 实时监控（watch 模式）
 - [ ] VM 创建（create）
 - [ ] VM 迁移（migrate）
 - [ ] 批量克隆
 
 **用户体验**
-- [ ] TUI 交互界面
-- [ ] 彩色输出优化
 - [ ] 进度条显示
 - [ ] 任务状态跟踪
 
@@ -125,7 +132,7 @@ v4/
 │   │   └── vm.c            # VM 操作 ✅
 │   ├── ui/
 │   │   ├── cli.c           # CLI 界面 ✅
-│   │   └── tui.c           # TUI 界面 (开发中)
+│   │   └── tui.c           # TUI 界面 ✅
 │   └── utils/
 │       ├── json.c          # JSON 工具 ✅
 │       └── common.c        # 通用工具 ✅
@@ -141,7 +148,7 @@ v4/
 - **语言**: C11
 - **JSON**: cJSON
 - **HTTP**: libcurl
-- **TUI**: ncurses (计划)
+- **TUI**: ncurses ✅
 - **构建**: Makefile
 
 ## 依赖
