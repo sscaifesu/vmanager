@@ -55,18 +55,45 @@ sudo ./vmanager list
 
 ## 快速开始
 
-### 安装
+### 方式 1：下载预编译二进制（推荐）
+
+**Linux**
+```bash
+# 下载
+wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-linux-amd64
+
+# 安装
+chmod +x vmanager-linux-amd64
+sudo mv vmanager-linux-amd64 /usr/local/bin/vmanager
+```
+
+**macOS**
+```bash
+# 下载
+wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-macos-amd64
+
+# 移除隔离属性（重要！）
+xattr -d com.apple.quarantine vmanager-macos-amd64
+
+# 安装
+chmod +x vmanager-macos-amd64
+sudo mv vmanager-macos-amd64 /usr/local/bin/vmanager
+```
+
+**注意**：macOS 用户必须执行 `xattr -d com.apple.quarantine` 命令，否则会提示"无法验证开发者"。
+
+### 方式 2：从源码编译
 
 ```bash
 # 克隆仓库
 git clone https://github.com/sscaifesu/vmanager.git
-cd vmanager/v2
+cd vmanager/v4
 
 # 编译
 make
 
 # 安装到系统
-sudo make install
+sudo cp vmanager /usr/local/bin/
 ```
 
 ### 基本使用

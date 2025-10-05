@@ -2,7 +2,37 @@
 
 Proxmox 虚拟机管理工具 - 专业、高效、易用
 
-## ⚠️ 开始使用前必读
+## 安装
+
+### 方式 1：下载预编译二进制（推荐）
+
+**Linux**
+```bash
+wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-linux-amd64
+chmod +x vmanager-linux-amd64
+sudo mv vmanager-linux-amd64 /usr/local/bin/vmanager
+```
+
+**macOS**
+```bash
+wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-macos-amd64
+xattr -d com.apple.quarantine vmanager-macos-amd64  # 移除隔离属性
+chmod +x vmanager-macos-amd64
+sudo mv vmanager-macos-amd64 /usr/local/bin/vmanager
+```
+
+**macOS 重要提示**：必须执行 `xattr -d com.apple.quarantine` 命令移除隔离属性，否则 macOS 会阻止运行并提示"无法验证开发者"。
+
+### 方式 2：从源码编译
+
+```bash
+git clone https://github.com/sscaifesu/vmanager.git
+cd vmanager/v4
+make
+sudo cp vmanager /usr/local/bin/
+```
+
+## ⚠️ 配置 API 权限
 
 **在使用 vmanager 之前，请先配置 API 权限！**
 
