@@ -168,7 +168,7 @@ jobs:
         with:
           files: release/*
           body: |
-            # vmanager v4.0.0
+            # vmanager ${{ github.ref_name }}
             
             Proxmox VM Management Tool
             
@@ -192,7 +192,7 @@ jobs:
             
             ```bash
             # 下载二进制文件
-            wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-linux-amd64
+            wget https://github.com/sscaifesu/vmanager/releases/download/${{ github.ref_name }}/vmanager-linux-amd64
             
             # 验证校验和
             sha256sum -c SHA256SUMS
