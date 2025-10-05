@@ -293,6 +293,12 @@ static void show_message(const char *title, const char *message) {
     getch();
     
     delwin(msg_win);
+    
+    // 清除整个屏幕
+    clear();
+    refresh();
+    
+    // 重新刷新所有窗口
     refresh_all();
     
     // 恢复超时
@@ -328,6 +334,12 @@ static bool show_confirm(const char *title, const char *message) {
     bool result = (ch == 'y' || ch == 'Y');
     
     delwin(msg_win);
+    
+    // 清除整个屏幕
+    clear();
+    refresh();
+    
+    // 重新刷新所有窗口
     refresh_all();
     
     // 恢复超时
