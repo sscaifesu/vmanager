@@ -1,143 +1,139 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
 
 jobs:
-  build:
-    name: Build for ${{ matrix.os }}
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - os: linux-amd64
-            runner: ubuntu-latest
-            cc: gcc
-          - os: linux-arm64
-            runner: ubuntu-latest
-            cc: aarch64-linux-gnu-gcc
-          - os: macos-amd64
-            runner: macos-latest
-            cc: clang
-          - os: macos-arm64
-            runner: macos-latest
-            cc: clang
-
+  build-linux:
+    name: Build Linux x86_64
+    runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install dependencies (Linux)
-        if: startsWith(matrix.os, 'linux')
+        
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libncurses5-dev
-          if [ "${{ matrix.os }}" = "linux-arm64" ]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu
-          fi
-
-      - name: Install dependencies (macOS)
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          brew install curl ncurses
-
-      - name: Build vmanager
-        working-directory: v4
-        env:
-          CC: ${{ matrix.cc }}
-        run: |
-          if [ "${{ matrix.os }}" = "linux-arm64" ]; then
-            # Cross-compile for ARM64
-            make CC=aarch64-linux-gnu-gcc LDFLAGS="-lcurl -lncurses -lm"
-          else
-            make
-          fi
           
+      - name: Build
+        working-directory: v4
+        run: make
+        
       - name: Prepare artifact
         run: |
-          mkdir -p release
-          cp v4/vmanager release/vmanager-${{ matrix.os }}
-          chmod +x release/vmanager-${{ matrix.os }}
-          
-      - name: Generate checksums
-        working-directory: release
-        run: |
-          sha256sum vmanager-${{ matrix.os }} > SHA256SUMS-${{ matrix.os }}
+          mkdir -p dist
+          cp v4/vmanager dist/vmanager-linux-amd64
+          chmod +x dist/vmanager-linux-amd64
+          cd dist
+          sha256sum vmanager-linux-amd64 > vmanager-linux-amd64.sha256
           
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vmanager-${{ matrix.os }}
-          path: release/*
+          name: linux-amd64
+          path: dist/*
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: brew install curl ncurses
+        
+      - name: Build
+        working-directory: v4
+        run: make
+        
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp v4/vmanager dist/vmanager-macos-amd64
+          chmod +x dist/vmanager-macos-amd64
+          cd dist
+          shasum -a 256 vmanager-macos-amd64 > vmanager-macos-amd64.sha256
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-amd64
+          path: dist/*
 
   release:
     name: Create Release
-    needs: build
+    needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           
-      - name: Prepare release files
+      - name: Prepare release
         run: |
           mkdir -p release
-          find artifacts -type f -exec cp {} release/ \;
+          cp artifacts/linux-amd64/* release/
+          cp artifacts/macos-amd64/* release/
           cd release
-          cat SHA256SUMS-* > SHA256SUMS
-          rm SHA256SUMS-*
+          cat *.sha256 > SHA256SUMS
+          ls -lh
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: release/*
           body: |
-            ## vmanager v4.0.0 Release
+            # vmanager v4.0.0
             
             Proxmox VM Management Tool
             
-            ### Features
+            ## Features
+            
             - CLI and TUI dual modes
-            - Batch operations support (ranges, comma-separated)
-            - VM management (start, stop, reboot, suspend, resume, destroy, clone)
+            - Batch operations (ranges, comma-separated)
+            - Complete VM management
             - Real-time monitoring
-            - Network and storage information
+            - Modular architecture
+            - Zero compiler warnings
             
-            ### Supported Platforms
+            ## Supported Platforms
+            
             - Linux x86_64
-            - Linux ARM64
             - macOS x86_64
-            - macOS ARM64 (Apple Silicon)
             
-            ### Installation
+            ## Installation
+            
             ```bash
-            # Download the binary for your platform
-            chmod +x vmanager-<platform>
-            sudo mv vmanager-<platform> /usr/local/bin/vmanager
+            # Download binary
+            wget https://github.com/sscaifesu/vmanager/releases/download/v4.0.0/vmanager-linux-amd64
             
-            # Configure
-            vmanager --config
+            # Verify checksum
+            sha256sum -c SHA256SUMS
+            
+            # Install
+            chmod +x vmanager-linux-amd64
+            sudo mv vmanager-linux-amd64 /usr/local/bin/vmanager
             
             # Use
             vmanager --help
             vmanager --tui
             ```
             
-            ### Checksums
-            See SHA256SUMS file for verification.
+            ## Team
             
-            ### Team
-            Copyright (C) 2025 YXWA Infosec Lab
-            Authors: Crystal & evalEvil
+            Copyright (C) 2025 YXWA Infosec Lab  
+            Authors: Crystal & evalEvil  
             License: GPL-3.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
