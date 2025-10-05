@@ -297,7 +297,20 @@ int api_get_vm_list(VMInfo **vms, int *count) {
         VMInfo *vm = &(*vms)[i++];
         vm->vmid = json_get_int(vm_json, "vmid", 0);
         strncpy(vm->name, json_get_string(vm_json, "name", "N/A"), sizeof(vm->name) - 1);
-        strncpy(vm->status, json_get_string(vm_json, "status", "N/A"), sizeof(vm->status) - 1);
+        
+        // 获取状态，优先检查 qmpstatus（更准确）
+        const char *qmpstatus = json_get_string(vm_json, "qmpstatus", NULL);
+        const char *status = json_get_string(vm_json, "status", "N/A");
+        
+        // 如果 qmpstatus 是 paused，显示为 paused
+        if (qmpstatus && strcmp(qmpstatus, "paused") == 0) {
+            strncpy(vm->status, "paused", sizeof(vm->status) - 1);
+        } else if (qmpstatus && strcmp(qmpstatus, "stopped") == 0) {
+            strncpy(vm->status, "stopped", sizeof(vm->status) - 1);
+        } else {
+            strncpy(vm->status, status, sizeof(vm->status) - 1);
+        }
+        
         vm->cpus = json_get_int(vm_json, "cpus", 0);
         vm->maxmem = (uint64_t)json_get_double(vm_json, "maxmem", 0);
         vm->mem = (uint64_t)json_get_double(vm_json, "mem", 0);
@@ -335,7 +348,19 @@ int api_get_vm_status(int vmid, VMInfo *vm) {
     
     vm->vmid = vmid;
     strncpy(vm->name, json_get_string(data, "name", "N/A"), sizeof(vm->name) - 1);
-    strncpy(vm->status, json_get_string(data, "status", "N/A"), sizeof(vm->status) - 1);
+    
+    // 获取状态，优先检查 qmpstatus
+    const char *qmpstatus = json_get_string(data, "qmpstatus", NULL);
+    const char *status = json_get_string(data, "status", "N/A");
+    
+    if (qmpstatus && strcmp(qmpstatus, "paused") == 0) {
+        strncpy(vm->status, "paused", sizeof(vm->status) - 1);
+    } else if (qmpstatus && strcmp(qmpstatus, "stopped") == 0) {
+        strncpy(vm->status, "stopped", sizeof(vm->status) - 1);
+    } else {
+        strncpy(vm->status, status, sizeof(vm->status) - 1);
+    }
+    
     vm->cpus = json_get_int(data, "cpus", 0);
     vm->maxmem = (uint64_t)json_get_double(data, "maxmem", 0);
     vm->mem = (uint64_t)json_get_double(data, "mem", 0);
