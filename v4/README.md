@@ -1,4 +1,26 @@
-# vmanager v4.0.0 (开发中)
+# vmanager v4.0.0
+
+Proxmox 虚拟机管理工具 - 专业、高效、易用
+
+## ⚠️ 开始使用前必读
+
+**在使用 vmanager 之前，请先配置 API 权限！**
+
+📖 **[API 权限配置指南](../API_PERMISSIONS.md)** - 详细的配置步骤和说明
+
+### 快速配置（在 PVE 服务器上执行）
+
+```bash
+# 创建角色并配置权限
+pveum role add VMManager -privs "VM.Audit,VM.PowerMgmt,VM.Allocate,VM.Clone,Datastore.AllocateSpace,SDN.Use"
+
+# 创建 API Token
+pveum user token add root@pam vmanager --privsep 0
+```
+
+保存显示的 Token Secret，然后运行 `vmanager` 进行配置。
+
+---
 
 ## 当前状态
 
