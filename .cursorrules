@@ -1,0 +1,31 @@
+# Cursor Rules for vmanager
+
+## NO EMOJI - Critical Rule
+Never use emoji in code, documentation, or commits.
+
+## Project Info
+- vmanager v4.0.0
+- Proxmox VM Management Tool
+- C11, GPL-3.0
+- YXWA Infosec Lab
+
+## Code Standards
+- High cohesion, low coupling
+- Zero compiler warnings
+- GNU coding style
+- Professional quality
+
+## Architecture
+- Modular design (14 files)
+- core/, ui/, utils/
+- Clean separation
+
+## Rules
+- snake_case functions
+- PascalCase structs
+- Proper error handling
+- No memory leaks
+- Clear documentation
+
+## Team
+Crystal & evalEvil - Professional engineering standards
