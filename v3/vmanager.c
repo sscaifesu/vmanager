@@ -278,11 +278,19 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < vmid_count; i++) {
             printf("%d ", vmids[i]);
         }
-        printf("\n确认继续？(yes/no): ");
+        printf("\n确认继续？(y/n): ");
         
         char confirm[10];
-        if (fgets(confirm, sizeof(confirm), stdin) == NULL ||
-            strcmp(confirm, "yes\n") != 0) {
+        if (fgets(confirm, sizeof(confirm), stdin) == NULL) {
+            printf(COLOR_YELLOW "操作已取消。\n" COLOR_RESET);
+            return 0;
+        }
+        
+        // 移除换行符
+        confirm[strcspn(confirm, "\n")] = '\0';
+        
+        // 接受 y, yes, Y, YES
+        if (strcasecmp(confirm, "y") != 0 && strcasecmp(confirm, "yes") != 0) {
             printf(COLOR_YELLOW "操作已取消。\n" COLOR_RESET);
             return 0;
         }
