@@ -165,14 +165,23 @@ int api_get_vm_ip(int vmid, VMInfo *vm) {
     if (!response) return -1;
     
     cJSON *data = cJSON_GetObjectItem(response, "data");
-    if (!cJSON_IsArray(data)) {
+    if (!data) {
+        cJSON_Delete(response);
+        return -1;
+    }
+    
+    // data 可能包含 result 数组
+    cJSON *result = cJSON_GetObjectItem(data, "result");
+    cJSON *interfaces = result ? result : data;
+    
+    if (!cJSON_IsArray(interfaces)) {
         cJSON_Delete(response);
         return -1;
     }
     
     // 遍历网络接口
     cJSON *iface = NULL;
-    cJSON_ArrayForEach(iface, data) {
+    cJSON_ArrayForEach(iface, interfaces) {
         cJSON *ip_addresses = cJSON_GetObjectItem(iface, "ip-addresses");
         if (!cJSON_IsArray(ip_addresses)) continue;
         
