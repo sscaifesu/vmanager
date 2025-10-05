@@ -144,7 +144,8 @@ int vm_stop(int vmid) {
 int vm_restart(int vmid) {
     printf("正在重启 VM %d...\n", vmid);
     
-    int ret = api_vm_action(vmid, "restart");
+    // Proxmox API 使用 "reboot" 而不是 "restart"
+    int ret = api_vm_action(vmid, "reboot");
     if (ret != 0) {
         fprintf(stderr, "错误：无法重启 VM %d\n", vmid);
         return -1;
